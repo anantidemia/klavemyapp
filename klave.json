@@ -1,0 +1,14 @@
+{
+    "version": "1",
+    "branches": [
+        "*"
+    ],
+    "applications": [
+        {
+            "name": "klavemyapp",
+            "description": "My Honest Application",
+            "version": "0.0.0",
+            "rootDir": "/apps/klavemyapp"
+        }
+    ]
+}
