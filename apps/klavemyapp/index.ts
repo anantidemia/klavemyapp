@@ -11,7 +11,8 @@ import {
     SecureElementOutputList,
     Transac,
     TransactionListOutput
-} from './types';
+} 
+from './types';
 import { getDate } from './utils';
 import { parseAllTransactions } from './transactionParser';
 
@@ -144,23 +145,23 @@ export function listSecureElement(): void {
         seList: existingSecureElement
     });
 }
+
 // Store transactions initially from parsed dummy data
 const transactions: Transac[] = parseAllTransactions();
 
 // Function to store transactions based on a provided key
 export function storeTransaction(input: SecureElementKey): void {
-    const transactions = parseAllTransactions();
+    // Load dummy transaction data
+    const allTransactions = parseAllTransactions();
 
     // Filter transactions based on the input key
-    const filteredTransactions: Transac[] = [];
-    for (let i = 0; i < transactions.length; i++) {
-        const transaction = transactions[i];
-        if (transaction.walletPublicKey == input.key || transaction.FromID == input.key || transaction.ToID == input.key) {
-            filteredTransactions.push(transaction);
-        }
-    }
+    const filteredTransactions: Transac[] = allTransactions.filter(transaction =>
+        transaction.walletPublicKey === input.key ||
+        transaction.FromID === input.key ||
+        transaction.ToID === input.key
+    );
 
-    if (filteredTransactions.length == 0) {
+    if (filteredTransactions.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
             message: `No transactions found for key '${input.key}'`
@@ -182,22 +183,18 @@ export function storeTransaction(input: SecureElementKey): void {
  * @param {SecureElementKey} input - A parsed input argument
  */
 export function listTransactionsBySecureElement(input: SecureElementKey): void {
-    const secureElement = Ledger.getTable(secureElementTable).get(input.key);
-    if (secureElement.length === 0) {
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+    const transactionList = seTransactionTable.get(input.key);
+
+    if (transactionList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: `Key '${input.key}' not found in secure element table`
+            message: `No transactions found for key '${input.key}'`
         });
         return;
     }
 
-    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-    let transactionList = seTransactionTable.get(input.key);
-
-    let listTransactionsOutput: Transac[] = [];
-    if (transactionList.length > 0) {
-        listTransactionsOutput = JSON.parse<Transac[]>(transactionList);
-    }
+    const listTransactionsOutput: Transac[] = JSON.parse<Transac[]>(transactionList);
 
     Notifier.sendJson<TransactionListOutput>({
         success: true,
