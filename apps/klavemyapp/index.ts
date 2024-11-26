@@ -14,7 +14,6 @@ import {
 } 
 from './types';
 import { getDate } from './utils';
-import { parseAllTransactions } from './transactionParser';
 
 const myTableName = "my_storage_table";
 const secureElementTable = "se_table";
@@ -146,36 +145,39 @@ export function listSecureElement(): void {
     });
 }
 
-// Store transactions initially from parsed dummy data
-const transactions: Transac[] = parseAllTransactions();
-export function storeTransaction(input: SecureElementKey): void {
-    // Load dummy transaction data
-    const allTransactions = parseAllTransactions();
-
-    // Filter transactions based on the input key
-    const filteredTransactions: Transac[] = [];
-    for (let i = 0; i < allTransactions.length; i++) {
-        const transaction = allTransactions[i];
-        if (
-            transaction.walletPublicKey === input.key ||
-            transaction.FromID === input.key ||
-            transaction.ToID === input.key
-        ) {
-            filteredTransactions.push(transaction);
-        }
-    }
-
-    if (filteredTransactions.length === 0) {
+/**
+ * @transaction
+ * @param {Transac} input - A parsed input argument
+ */
+export function storeTransaction(input: Transac): void {
+    // Validate the input
+    if (
+        !input.walletPublicKey ||
+        !input.FromID ||
+        !input.ToID ||
+        !input.amount ||
+        !input.transactionName ||
+        !input.synchronizationDate
+    ) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: `No transactions found for key '${input.key}'`
+            message: "Missing transaction fields in the input"
         });
         return;
     }
 
-    // Store filtered transactions in the secure element transaction table
+    // Store the transaction based on the wallet public key
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-    seTransactionTable.set(input.key, JSON.stringify<Transac[]>(filteredTransactions));
+    let existingTransactionList = seTransactionTable.get(input.walletPublicKey);
+
+    let existingTransactions: Transac[] = existingTransactionList.length > 0
+        ? JSON.parse<Transac[]>(existingTransactionList)
+        : [];
+
+    existingTransactions.push(input);
+
+    // Store the updated list of transactions in the ledger
+    seTransactionTable.set(input.walletPublicKey, JSON.stringify<Transac[]>(existingTransactions));
 
     Notifier.sendJson<StoreOutput>({
         success: true
