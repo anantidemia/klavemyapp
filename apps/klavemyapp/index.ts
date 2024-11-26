@@ -148,18 +148,22 @@ export function listSecureElement(): void {
 
 // Store transactions initially from parsed dummy data
 const transactions: Transac[] = parseAllTransactions();
-
-// Function to store transactions based on a provided key
 export function storeTransaction(input: SecureElementKey): void {
     // Load dummy transaction data
     const allTransactions = parseAllTransactions();
 
     // Filter transactions based on the input key
-    const filteredTransactions: Transac[] = allTransactions.filter(transaction =>
-        transaction.walletPublicKey === input.key ||
-        transaction.FromID === input.key ||
-        transaction.ToID === input.key
-    );
+    const filteredTransactions: Transac[] = [];
+    for (let i = 0; i < allTransactions.length; i++) {
+        const transaction = allTransactions[i];
+        if (
+            transaction.walletPublicKey === input.key ||
+            transaction.FromID === input.key ||
+            transaction.ToID === input.key
+        ) {
+            filteredTransactions.push(transaction);
+        }
+    }
 
     if (filteredTransactions.length === 0) {
         Notifier.sendJson<ErrorMessage>({

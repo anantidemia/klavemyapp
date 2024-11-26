@@ -56,16 +56,16 @@ export class SecureElementOutputList {
 
 @serializable
 export class Transac {
-    walletPublicKey: string;
-    synchronizationDate: string;
-    transactionName: string;
-    FromID: string;
-    ToID: string;
-    nonce:string;
-    amount: string;
-    generation: string;
-    currencycode: string;
-    txdate:string;
+    walletPublicKey!: string;
+    synchronizationDate!: string;
+    transactionName!: string;
+    FromID!: string;
+    ToID!: string;
+    nonce!: string;
+    amount!: string;
+    generation!: string;
+    currencycode!: string;
+    txdate!: string;
 }
 
 @serializable
