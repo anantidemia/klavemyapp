@@ -200,7 +200,14 @@ export function listTransactionsBySecureElement(input: SecureElementKey): void {
         return;
     }
 
-    const listTransactionsOutput: Transac[] = JSON.parse<Transac[]>(transactionList);
+    // Parse the list of transactions
+    let listTransactionsOutput: Transac[] = JSON.parse<Transac[]>(transactionList);
+
+    // Sort by walletPublicKey in ascending order and by txnDate in descending order
+    listTransactionsOutput = listTransactionsOutput.sort((a, b) => {
+        if (a.walletPublicKey < b.walletPublicKey) return -1;
+        else  return 1;
+    });
 
     Notifier.sendJson<TransactionListOutput>({
         success: true,
