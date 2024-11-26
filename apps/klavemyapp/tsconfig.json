@@ -1,6 +1,15 @@
 {
-    "extends": "../../node_modules/@klave/sdk/sdk.json",
-    "include": [
-        "./**/*.ts"
-    ]
+  "extends": "../../node_modules/@klave/sdk/sdk.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@secretarium/connector": [
+        "node_modules/@secretarium/connector/index",
+        "node_modules/@secretarium/connector/src"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ]
 }
