@@ -8,7 +8,8 @@ export class ErrorMessage {
 
 @serializable
 export class FetchInput {
-    key!: string;
+    walletPublicKey!: string;
+
 }
 
 @serializable
@@ -19,7 +20,7 @@ export class FetchOutput {
 
 @serializable
 export class StoreInput {
-    key!: string;
+    walletPublicKey!: string;
     value!: string;
 }
 
@@ -30,12 +31,12 @@ export class StoreOutput {
 
 @serializable
 export class SecureElementKey {
-    key!: string;
+    walletPublicKey!: string;
 }
 
 @serializable
 export class SecureElement {
-    key!: string;
+    walletPublicKey!: string;
     field1!: string;
     field2!: string;
     creationDate!: i64;

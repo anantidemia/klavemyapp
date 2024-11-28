@@ -24,11 +24,11 @@ const secureElementTransactionTable = "transaction_table";
  * @param {FetchInput} input - A parsed input argument
  */
 export function fetchValue(input: FetchInput): void {
-    let value = Ledger.getTable(myTableName).get(input.key);
+    let value = Ledger.getTable(myTableName).get(input.walletPublicKey);
     if (value.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: `key '${input.key}' not found in table`
+            message: `walletPublicKey '${input.walletPublicKey}' not found in table`
         });
     } else {
         Notifier.sendJson<FetchOutput>({
@@ -43,8 +43,8 @@ export function fetchValue(input: FetchInput): void {
  * @param {StoreInput} input - A parsed input argument
  */
 export function storeValue(input: StoreInput): void {
-    if (input.key && input.value) {
-        Ledger.getTable(myTableName).set(input.key, input.value);
+    if (input.walletPublicKey && input.value) {
+        Ledger.getTable(myTableName).set(input.walletPublicKey, input.value);
         Notifier.sendJson<StoreOutput>({
             success: true
         });
@@ -62,11 +62,11 @@ export function storeValue(input: StoreInput): void {
  * @param {SecureElementKey} input - A parsed input argument
  */
 export function getSecureElement(input: SecureElementKey): void {
-    let secureElement = Ledger.getTable(secureElementTable).get(input.key);
+    let secureElement = Ledger.getTable(secureElementTable).get(input.walletPublicKey);
     if (secureElement.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: `key '${input.key}' not found in secure element table`
+            message: `walletPublicKey '${input.walletPublicKey}' not found in secure element table`
         });
         return;
     } else {
@@ -85,7 +85,7 @@ export function createSecureElement(input: SecureElement): void {
     const seTable = Ledger.getTable(secureElementTable);
 
     const seObj: SecureElement = {
-        key: input.key,
+        walletPublicKey: input.walletPublicKey,
         field1: input.field1,
         field2: input.field2,
         creationDate: getDate(),
@@ -93,7 +93,7 @@ export function createSecureElement(input: SecureElement): void {
     };
 
     // Check if secure element already stored
-    const secureElement = seTable.get(input.key);
+    const secureElement = seTable.get(input.walletPublicKey);
     if (secureElement.length > 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
@@ -102,23 +102,23 @@ export function createSecureElement(input: SecureElement): void {
         return;
     }
 
-    // Check if key is already listed in the list of keys, if not add it to the list
+    // Check if walletPublicKey is already listed in the list of keys, if not add it to the list
     const keysList = seTable.get('keysList');
     if (keysList.length > 0) {
         const existingKeys = JSON.parse<string[]>(keysList);
-        if (!existingKeys.includes(input.key)) {
-            existingKeys.push(input.key);
+        if (!existingKeys.includes(input.walletPublicKey)) {
+            existingKeys.push(input.walletPublicKey);
             seTable.set('keysList', JSON.stringify<string[]>(existingKeys));
         }
     } else {
-        seTable.set('keysList', JSON.stringify<string[]>([input.key]));
+        seTable.set('keysList', JSON.stringify<string[]>([input.walletPublicKey]));
     }
 
-    seTable.set(input.key, JSON.stringify<SecureElement>(seObj));
+    seTable.set(input.walletPublicKey, JSON.stringify<SecureElement>(seObj));
 
     Notifier.sendJson<FetchOutput>({
         success: true,
-        value: `Secure element with key ${input.key} has been stored.`
+        value: `Secure element with walletPublicKey ${input.walletPublicKey} has been stored.`
     });
 }
 
@@ -134,8 +134,8 @@ export function listSecureElement(): void {
 
     const existingSecureElement: SecureElement[] = [];
     for (let i = 0; i < existingKeys.length; i++) {
-        const key = existingKeys[i];
-        const se = JSON.parse<SecureElement>(seTable.get(key));
+        const walletPublicKey = existingKeys[i];
+        const se = JSON.parse<SecureElement>(seTable.get(walletPublicKey));
         existingSecureElement.push(se);
     }
 
@@ -213,12 +213,12 @@ export function storeTransaction(input: Transac): void {
  */
 export function listTransactionsBySecureElement(input: SecureElementKey): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-    const transactionList = seTransactionTable.get(input.key);
+    const transactionList = seTransactionTable.get(input.walletPublicKey);
 
     if (transactionList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: `No transactions found for key '${input.key}'`
+            message: `No transactions found for walletPublicKey '${input.walletPublicKey}'`
         });
         return;
     }
