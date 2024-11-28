@@ -146,6 +146,7 @@ export function listSecureElement(): void {
 }
 
 /**
+ *
  * @transaction
  * @param {Transac} input - A parsed input argument
  */
@@ -191,7 +192,7 @@ export function storeTransaction(input: Transac): void {
     if (isDuplicate) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: "Transaction with the same walletPublicKey, synchronizationDate, and nonce already exists."
+            message: "Error Storing Transaction Logs : Duplicate entry"
         });
         return;
     }
