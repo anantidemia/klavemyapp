@@ -174,6 +174,28 @@ export function storeTransaction(input: Transac): void {
         ? JSON.parse<Transac[]>(existingTransactionList)
         : [];
 
+    // Check if a transaction with the same walletPublicKey, synchronizationDate, and nonce already exists
+    let isDuplicate = false;
+    for (let i = 0; i < existingTransactions.length; i++) {
+        const transaction = existingTransactions[i];
+        if (
+            transaction.walletPublicKey === input.walletPublicKey &&
+            transaction.synchronizationDate === input.synchronizationDate &&
+            transaction.nonce === input.nonce
+        ) {
+            isDuplicate = true;
+            break;
+        }
+    }
+
+    if (isDuplicate) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Transaction with the same walletPublicKey, synchronizationDate, and nonce already exists."
+        });
+        return;
+    }
+
     existingTransactions.push(input);
 
     // Store the updated list of transactions in the ledger
