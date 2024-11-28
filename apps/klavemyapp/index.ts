@@ -24,11 +24,11 @@ const secureElementTransactionTable = "transaction_table";
  * @param {FetchInput} input - A parsed input argument
  */
 export function fetchValue(input: FetchInput): void {
-    let value = Ledger.getTable(myTableName).get(input.walletPublicKey);
+    let value = Ledger.getTable(myTableName).get(input.key);
     if (value.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: `walletPublicKey '${input.walletPublicKey}' not found in table`
+            message: `walletPublicKey '${input.key}' not found in table`
         });
     } else {
         Notifier.sendJson<FetchOutput>({
@@ -43,8 +43,8 @@ export function fetchValue(input: FetchInput): void {
  * @param {StoreInput} input - A parsed input argument
  */
 export function storeValue(input: StoreInput): void {
-    if (input.walletPublicKey && input.value) {
-        Ledger.getTable(myTableName).set(input.walletPublicKey, input.value);
+    if (input.key && input.value) {
+        Ledger.getTable(myTableName).set(input.key, input.value);
         Notifier.sendJson<StoreOutput>({
             success: true
         });

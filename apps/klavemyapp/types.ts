@@ -8,7 +8,7 @@ export class ErrorMessage {
 
 @serializable
 export class FetchInput {
-    walletPublicKey!: string;
+    key!: string;
 
 }
 
@@ -20,7 +20,7 @@ export class FetchOutput {
 
 @serializable
 export class StoreInput {
-    walletPublicKey!: string;
+    key!: string;
     value!: string;
 }
 
