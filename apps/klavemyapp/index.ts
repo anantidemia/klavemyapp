@@ -206,12 +206,13 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
 /**
  * @query
  * Fetch all walletPublicKey values from the transaction list stored in the ledger,
- * and return them as key-value pairs with keys in the format "wallet_pubkeyX".
+ * and return them as key-value pairs with keys in the format "WalletPublicKeyX".
  */
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
     const keysList = seTransactionTable.get("keysList");
 
+    // Check if keysList exists and is not empty
     if (!keysList || keysList.trim() === "[]") {
         Notifier.sendJson<ErrorMessage>({
             success: false,
@@ -220,8 +221,9 @@ export function listAllWalletPublicKeys(): void {
         return;
     }
 
-    const walletPublicKeys: string[] = [];
+    // Parse the keysList to get the transaction keys
     const transactionKeys: string[] = JSON.parse<string[]>(keysList);
+    const walletPublicKeys: string[] = [];
 
     // Iterate over each key in the transaction table
     for (let i = 0; i < transactionKeys.length; i++) {
@@ -246,11 +248,12 @@ export function listAllWalletPublicKeys(): void {
         }
     }
 
-    // Generate key-value pairs in the format "wallet_pubkeyX: walletPublicKey"
+    // Generate key-value pairs in the format "WalletPublicKeyX: walletPublicKey"
     const keyValuePairs = walletPublicKeys.map<string>((key: string, index: i32): string => {
         return `WalletPublicKey${index + 1}: ${key}`;
     });
 
+    // Send the result back as a response
     Notifier.sendJson<StoreKeys>({
         success: true,
         walletPublicKeys: keyValuePairs,
