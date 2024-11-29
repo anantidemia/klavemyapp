@@ -203,7 +203,11 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
         transactionList: listTransactionsOutput
     });
 }
-
+/**
+ * @query
+ * Fetch all walletPublicKey values from the transaction list stored in the ledger,
+ * and return them as key-value pairs with keys in the format "wallet_pubkeyX".
+ */
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
     const keysList = seTransactionTable.get("keysList");
@@ -216,63 +220,35 @@ export function listAllWalletPublicKeys(): void {
         return;
     }
 
-    Notifier.sendJson<ErrorMessage>({
-        success: false,
-        message: "Fetched keysList: " + keysList,
-    });
-
     const walletPublicKeys: string[] = [];
     const transactionKeys: string[] = JSON.parse<string[]>(keysList);
 
+    // Iterate over each key in the transaction table
     for (let i = 0; i < transactionKeys.length; i++) {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
 
+        // Skip if no data for this key
         if (!transactionData || transactionData.trim() === "") {
-            Notifier.sendJson<ErrorMessage>({
-                success: false,
-                message: "No transaction data for key: " + transactionKeys[i],
-            });
             continue;
         }
 
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "Transaction data for key " + transactionKeys[i] + ": " + transactionData,
-        });
-
+        // Parse the transaction list for this key
         const transactions: Transac[] = JSON.parse<Transac[]>(transactionData);
-        if (!transactions) {
-            Notifier.sendJson<ErrorMessage>({
-                success: false,
-                message: "Error parsing transaction data for key: " + transactionKeys[i],
-            });
-            continue;
-        }
 
+        // Extract walletPublicKey from each transaction
         for (let j = 0; j < transactions.length; j++) {
             const walletPublicKey = transactions[j].walletPublicKey;
+
+            // Add only non-empty walletPublicKeys
             if (walletPublicKey && walletPublicKey.trim() !== "") {
-                Notifier.sendJson<ErrorMessage>({
-                    success: false,
-                    message: "Adding walletPublicKey: " + walletPublicKey,
-                });
                 walletPublicKeys.push(walletPublicKey);
-            } else {
-                Notifier.sendJson<ErrorMessage>({
-                    success: false,
-                    message: "Empty walletPublicKey in transaction: " + JSON.stringify(transactions[j]),
-                });
             }
         }
     }
 
-    const keyValuePairs: string[] = walletPublicKeys.map<string>((key: string, index: i32): string => {
-        return "wallet_pubkey" + (index + 1).toString() + ": " + key;
-    });
-
-    Notifier.sendJson<ErrorMessage>({
-        success: false,
-        message: "Final key-value pairs: " + keyValuePairs.join(", "),
+    // Generate key-value pairs in the format "wallet_pubkeyX: walletPublicKey"
+    const keyValuePairs = walletPublicKeys.map<string>((key: string, index: i32): string => {
+        return `WalletPublicKey${index + 1}: ${key}`;
     });
 
     Notifier.sendJson<StoreKeys>({
