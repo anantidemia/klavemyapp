@@ -31,7 +31,7 @@
     typescript "^5.4.4"
     uuid "^9.0.1"
 
-"@klave/sdk@0.13.0":
+"@klave/sdk@^0.13.0":
   version "0.13.0"
   resolved "https://registry.yarnpkg.com/@klave/sdk/-/sdk-0.13.0.tgz#9f7d7a2bcbab62a2131880de93b0e13467726b47"
   integrity sha512-9qeWhm6t8shrTLcTxgKex2NDfdc+wJGlUfiOr3x202z+kvMYypuGNN+x6/taUW5IwSToPhtfXoYnqVuN+HOGrA==

@@ -9,7 +9,7 @@
         "build": "stac ."
     },
     "devDependencies": {
-        "@klave/sdk": "0.13.0",
+        "@klave/sdk": "^0.13.0",
         "as-base64": "0.2.0",
         "assemblyscript": "^0.27.26",
         "path-complete-extname": "1.0.0",
