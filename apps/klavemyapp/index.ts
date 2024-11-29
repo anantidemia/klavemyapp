@@ -260,3 +260,27 @@ export function listAllWalletPublicKeys(): void {
         walletPublicKeys: keyValuePairs,
     });
 }
+/**
+ * @transaction
+ * Deletes all transaction logs and data stored in the transaction_table and seTransactionTable.
+ */
+export function deleteAllTransactionLogs(): void {
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+
+    // Get the list of keys from the table
+    const keysList = seTransactionTable.get("keysList") || "[]";
+    const keys = JSON.parse<string[]>(keysList);
+
+    // Iterate through each key and clear its associated data
+    for (let i = 0; i < keys.length; i++) {
+        seTransactionTable.set(keys[i], ""); // Set an empty string to simulate deletion
+    }
+
+    // Clear the keysList
+    seTransactionTable.set("keysList", "[]"); // Reset the keysList to an empty array
+
+    // Confirm deletion
+    Notifier.sendJson<StoreOutput>({
+        success: true
+    });
+}
