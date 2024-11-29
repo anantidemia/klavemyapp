@@ -10,7 +10,8 @@ import {
     ErrorMessage,
     SecureElementOutputList,
     Transac,
-    TransactionListOutput
+    TransactionListOutput,
+    StoreKeys
 } 
 from './types';
 import { getDate } from './utils';
@@ -146,94 +147,60 @@ export function listSecureElement(): void {
 }
 
 /**
- *
  * @transaction
  * @param {Transac} input - A parsed input argument
  */
 export function storeTransaction(input: Transac): void {
-    // Validate the input
-    if (
-        !input.walletPublicKey ||
-        !input.FromID ||
-        !input.ToID ||
-        !input.amount ||
-        !input.transactionName ||
-        !input.synchronizationDate
-    ) {
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "Missing transaction fields in the input"
-        });
-        return;
-    }
-
-    // Store the transaction based on the wallet public key
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-    let existingTransactionList = seTransactionTable.get(input.walletPublicKey);
 
-    let existingTransactions: Transac[] = existingTransactionList.length > 0
-        ? JSON.parse<Transac[]>(existingTransactionList)
-        : [];
+    // Add the transaction
+    const existingTransactions = seTransactionTable.get(input.walletPublicKey) || "[]";
+    const transactions = JSON.parse<Array<Transac>>(existingTransactions);
+    transactions.push(input);
+    seTransactionTable.set(input.walletPublicKey, JSON.stringify(transactions));
 
-    // Check if a transaction with the same walletPublicKey, synchronizationDate, and nonce already exists
-    let isDuplicate = false;
-    for (let i = 0; i < existingTransactions.length; i++) {
-        const transaction = existingTransactions[i];
-        if (
-            transaction.walletPublicKey === input.walletPublicKey &&
-            transaction.synchronizationDate === input.synchronizationDate &&
-            transaction.nonce === input.nonce
-        ) {
-            isDuplicate = true;
-            break;
-        }
+    // Maintain a list of keys in the table
+    const keysList = seTransactionTable.get("keysList") || "[]";
+    const keys = JSON.parse<Array<string>>(keysList);
+
+    if (!keys.includes(input.walletPublicKey)) {
+        keys.push(input.walletPublicKey);
+        seTransactionTable.set("keysList", JSON.stringify(keys));
     }
-
-    if (isDuplicate) {
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "Error Storing Transaction Logs : Duplicate entry"
-        });
-        return;
-    }
-
-    existingTransactions.push(input);
-
-    // Store the updated list of transactions in the ledger
-    seTransactionTable.set(input.walletPublicKey, JSON.stringify<Transac[]>(existingTransactions));
 
     Notifier.sendJson<StoreOutput>({
         success: true
     });
 }
 
+
 /**
  * @query
- * @param {SecureElementKey} input - A parsed input argument
+ * Fetch all walletPublicKey values stored in the ledger's transaction table,
+ * and return them as a key-value pair with keys in the format "wallet_pubkeyX".
  */
-export function listTransactionsBySecureElement(input: SecureElementKey): void {
+export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-    const transactionList = seTransactionTable.get(input.walletPublicKey);
+    const keysList = seTransactionTable.get("keysList");
 
-    if (transactionList.length === 0) {
+    if (keysList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: `No transactions found for walletPublicKey '${input.walletPublicKey}'`
+            message: "No walletPublicKey entries found in the transaction table.",
         });
         return;
     }
 
-    // Parse the list of transactions
-    let listTransactionsOutput: Transac[] = JSON.parse<Transac[]>(transactionList);
+    const walletPublicKeys = JSON.parse<string[]>(keysList);
 
-    // Sort by walletPublicKey in ascending order and by txnDate in descending order
-    listTransactionsOutput = listTransactionsOutput.sort((a, b) => {
-        if (a.walletPublicKey < b.walletPublicKey) return -1;
-        else  return 1;
-    });
+    // Create key-value pairs in the format "wallet_pubkeyX: walletPublicKey"
+    const keyValuePairs = new Array<string>();
+    for (let i = 0; i < walletPublicKeys.length; i++) {
+        keyValuePairs.push(`wallet_pubkey${i + 1}: ${walletPublicKeys[i]}`);
+    }
 
-    Notifier.sendJson<TransactionListOutput>({
+    Notifier.sendJson<StoreKeys>({
         success: true,
-        transactionList: listTransactionsOutput
+        walletPublicKeys: keyValuePairs,
     });
 }

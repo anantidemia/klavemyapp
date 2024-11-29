@@ -80,3 +80,9 @@ export class TransactionListOutput {
     success!: boolean;
     transactionList!: Transac[];
 }
+
+@serializable
+export class StoreKeys {
+    success!: boolean;
+    walletPublicKeys!: string[]; // Array of key-value pair strings
+}
