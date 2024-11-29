@@ -179,12 +179,12 @@ export function storeTransaction(input: Transac): void {
  */
 export function listTransactionsBySecureElement(input: SecureElementKey): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-    const transactionList = seTransactionTable.get(input.key);
+    const transactionList = seTransactionTable.get(input.walletPublicKey);
 
     if (transactionList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: `No transactions found for key '${input.key}'`
+            message: `No transactions found for key '${input.walletPublicKey}'`
         });
         return;
     }
