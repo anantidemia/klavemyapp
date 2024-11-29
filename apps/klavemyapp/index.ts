@@ -177,7 +177,7 @@ export function storeTransaction(input: Transac): void {
  * @query
  * @param {SecureElementKey} input - A parsed input argument
  */
-export function listTransactionsBySecureElement(input: SecureElementKey): void {
+export function listTransactionsByWalletPublicKeys(input: SecureElementKey): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
     const transactionList = seTransactionTable.get(input.walletPublicKey);
 
@@ -204,16 +204,11 @@ export function listTransactionsBySecureElement(input: SecureElementKey): void {
     });
 }
 
-/**
- * @query
- * Fetch all walletPublicKey values from the transactions stored in the ledger,
- * and return them as key-value pairs with keys in the format "wallet_pubkeyX".
- */
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
     const keysList = seTransactionTable.get("keysList");
 
-    if (keysList.length === 0) {
+    if (!keysList || keysList.trim() === "[]") {
         Notifier.sendJson<ErrorMessage>({
             success: false,
             message: "No transactions found in the ledger.",
@@ -221,30 +216,46 @@ export function listAllWalletPublicKeys(): void {
         return;
     }
 
+    console.log("Fetched keysList: " + keysList);
+
     const walletPublicKeys: string[] = [];
     const transactionKeys: string[] = JSON.parse<string[]>(keysList);
 
-    // Iterate over each transaction key and extract walletPublicKey
     for (let i = 0; i < transactionKeys.length; i++) {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
-        if (transactionData) {
-            const transactions: Transac[] = JSON.parse<Transac[]>(transactionData);
-            for (let j = 0; j < transactions.length; j++) {
-                const walletPublicKey = transactions[j].walletPublicKey;
+
+        if (!transactionData || transactionData.trim() === "") {
+            console.log("No transaction data for key: " + transactionKeys[i]);
+            continue;
+        }
+
+        console.log("Transaction data for key " + transactionKeys[i] + ": " + transactionData);
+
+        const transactions: Transac[] = JSON.parse<Transac[]>(transactionData);
+        if (!transactions) {
+            console.log("Error parsing transaction data for key: " + transactionKeys[i]);
+            continue;
+        }
+
+        for (let j = 0; j < transactions.length; j++) {
+            const walletPublicKey = transactions[j].walletPublicKey;
+            if (walletPublicKey && walletPublicKey.trim() !== "") {
+                console.log("Adding walletPublicKey: " + walletPublicKey);
                 walletPublicKeys.push(walletPublicKey);
+            } else {
+                console.log("Empty walletPublicKey in transaction: " + JSON.stringify(transactions[j]));
             }
         }
     }
 
-    // Create key-value pairs in the format "wallet_pubkeyX: walletPublicKey"
-    const keyValuePairs = new Array<string>();
-    for (let i = 0; i < walletPublicKeys.length; i++) {
-        keyValuePairs.push(`wallet_pubkey${i + 1}: ${walletPublicKeys[i]}`);
-    }
+    const keyValuePairs: string[] = walletPublicKeys.map<string>((key: string, index: i32): string => {
+        return "wallet_pubkey" + (index + 1).toString() + ": " + key;
+    });
+
+    console.log("Final key-value pairs: " + keyValuePairs.join(", "));
 
     Notifier.sendJson<StoreKeys>({
         success: true,
         walletPublicKeys: keyValuePairs,
     });
 }
-
