@@ -216,7 +216,10 @@ export function listAllWalletPublicKeys(): void {
         return;
     }
 
-    console.log("Fetched keysList: " + keysList);
+    Notifier.sendJson<ErrorMessage>({
+        success: false,
+        message: "Fetched keysList: " + keysList,
+    });
 
     const walletPublicKeys: string[] = [];
     const transactionKeys: string[] = JSON.parse<string[]>(keysList);
@@ -225,25 +228,40 @@ export function listAllWalletPublicKeys(): void {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
 
         if (!transactionData || transactionData.trim() === "") {
-            console.log("No transaction data for key: " + transactionKeys[i]);
+            Notifier.sendJson<ErrorMessage>({
+                success: false,
+                message: "No transaction data for key: " + transactionKeys[i],
+            });
             continue;
         }
 
-        console.log("Transaction data for key " + transactionKeys[i] + ": " + transactionData);
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Transaction data for key " + transactionKeys[i] + ": " + transactionData,
+        });
 
         const transactions: Transac[] = JSON.parse<Transac[]>(transactionData);
         if (!transactions) {
-            console.log("Error parsing transaction data for key: " + transactionKeys[i]);
+            Notifier.sendJson<ErrorMessage>({
+                success: false,
+                message: "Error parsing transaction data for key: " + transactionKeys[i],
+            });
             continue;
         }
 
         for (let j = 0; j < transactions.length; j++) {
             const walletPublicKey = transactions[j].walletPublicKey;
             if (walletPublicKey && walletPublicKey.trim() !== "") {
-                console.log("Adding walletPublicKey: " + walletPublicKey);
+                Notifier.sendJson<ErrorMessage>({
+                    success: false,
+                    message: "Adding walletPublicKey: " + walletPublicKey,
+                });
                 walletPublicKeys.push(walletPublicKey);
             } else {
-                console.log("Empty walletPublicKey in transaction: " + JSON.stringify(transactions[j]));
+                Notifier.sendJson<ErrorMessage>({
+                    success: false,
+                    message: "Empty walletPublicKey in transaction: " + JSON.stringify(transactions[j]),
+                });
             }
         }
     }
@@ -252,7 +270,10 @@ export function listAllWalletPublicKeys(): void {
         return "wallet_pubkey" + (index + 1).toString() + ": " + key;
     });
 
-    console.log("Final key-value pairs: " + keyValuePairs.join(", "));
+    Notifier.sendJson<ErrorMessage>({
+        success: false,
+        message: "Final key-value pairs: " + keyValuePairs.join(", "),
+    });
 
     Notifier.sendJson<StoreKeys>({
         success: true,
