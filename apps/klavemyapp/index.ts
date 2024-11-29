@@ -244,6 +244,7 @@ export function listAllWalletPublicKeys(): void {
             // Add only non-empty walletPublicKeys
             if (walletPublicKey && walletPublicKey.trim() !== "") {
                 walletPublicKeys.push(walletPublicKey);
+                seTransactionTable.set("keysList", JSON.stringify(walletPublicKey));
             }
         }
     }
