@@ -173,6 +173,36 @@ export function storeTransaction(input: Transac): void {
     });
 }
 
+/**
+ * @query
+ * @param {SecureElementKey} input - A parsed input argument
+ */
+export function listTransactionsBySecureElement(input: SecureElementKey): void {
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+    const transactionList = seTransactionTable.get(input.key);
+
+    if (transactionList.length === 0) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: `No transactions found for key '${input.key}'`
+        });
+        return;
+    }
+
+    // Parse the list of transactions
+    let listTransactionsOutput: Transac[] = JSON.parse<Transac[]>(transactionList);
+
+    // Sort by walletPublicKey in ascending order and by txnDate in descending order
+    listTransactionsOutput = listTransactionsOutput.sort((a, b) => {
+        if (a.walletPublicKey < b.walletPublicKey) return -1;
+        else  return 1;
+    });
+
+    Notifier.sendJson<TransactionListOutput>({
+        success: true,
+        transactionList: listTransactionsOutput
+    });
+}
 
 /**
  * @query
