@@ -55,6 +55,19 @@ export class SecureElementOutputList {
     seList!: SecureElement[];
 }
 
+interface ITransacInput {
+    walletPublicKey: string;
+    synchronizationDate: string;
+    transactionName: string;
+    FromID: string;
+    ToID: string;
+    nonce: string;
+    amount: string;
+    generation: string;
+    currencycode: string;
+    txdate: string;
+}
+
 @serializable
 export class Transac {
     walletPublicKey!: string;
@@ -67,6 +80,34 @@ export class Transac {
     generation!: string;
     currencycode!: string;
     txdate!: string;
+
+    constructor(input: ITransacInput) {
+        if (
+            !input.walletPublicKey ||
+            !input.synchronizationDate ||
+            !input.transactionName ||
+            !input.FromID ||
+            !input.ToID ||
+            !input.nonce ||
+            !input.amount ||
+            !input.generation ||
+            !input.currencycode ||
+            !input.txdate
+        ) {
+            throw new Error("All fields in Transac are mandatory. Please provide complete input.");
+        }
+
+        this.walletPublicKey = input.walletPublicKey;
+        this.synchronizationDate = input.synchronizationDate;
+        this.transactionName = input.transactionName;
+        this.FromID = input.FromID;
+        this.ToID = input.ToID;
+        this.nonce = input.nonce;
+        this.amount = input.amount;
+        this.generation = input.generation;
+        this.currencycode = input.currencycode;
+        this.txdate = input.txdate;
+    }
 }
 
 @serializable
