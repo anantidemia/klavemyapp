@@ -89,3 +89,15 @@ export class StoredKeys {
     success!: boolean;
     walletPublicKeys!: string[]; // Array of key-value pair strings
 }
+@serializable
+export class GeneratedKeys {
+    success: boolean = false;
+    keys: Keys = new Keys();
+}
+
+@serializable
+class Keys {
+    key1: string = "";
+    key2: string = "";
+    key3: string = "";
+}

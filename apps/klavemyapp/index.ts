@@ -11,7 +11,8 @@ import {
     SecureElementOutputList,
     Transac,
     TransactionListOutput,
-    StoredKeys
+    StoredKeys,
+    GeneratedKeys
 } 
 from './types';
 import { getDate } from './utils';
@@ -29,7 +30,7 @@ export function fetchValue(input: FetchInput): void {
     if (value.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: `walletPublicKey '${input.key}' not found in table`
+            message: `Key '${input.key}' not found in table`
         });
     } else {
         Notifier.sendJson<FetchOutput>({
@@ -321,4 +322,30 @@ export function deleteAllTransactionLogs(): void {
     Notifier.sendJson<StoreOutput>({
         success: true
     });
+}
+/**
+ * @query
+ * Generates three keys based on an input key.
+ * @param {FetchInput} input - Input containing the base key.
+ */
+export function generateKeys(input: FetchInput): void {
+    // Validate the input key
+    if (!input.key || input.key.trim() === "") {
+        // Prepare an error response
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Input key is missing or invalid.",
+        });
+        return;
+    }
+
+    // Generate the keys
+    const generatedKeys = new GeneratedKeys();
+    generatedKeys.success = true;
+    generatedKeys.keys.key1 = input.key;
+    generatedKeys.keys.key2 = input.key + "1";
+    generatedKeys.keys.key3 = input.key + "2";
+
+    // Return the keys
+    Notifier.sendJson<GeneratedKeys>(generatedKeys);
 }
