@@ -146,24 +146,12 @@ export function listSecureElement(): void {
     });
 }
 
+/**
+ * @transaction
+ * @param {Transac} input - A parsed input argument
+ */
 export function storeTransaction(input: Transac): void {
-    if (
-        !input.walletPublicKey ||
-        !input.synchronizationDate ||
-        !input.transactionName ||
-        !input.FromID ||
-        !input.ToID ||
-        !input.nonce ||
-        !input.amount ||
-        !input.generation ||
-        !input.currencycode ||
-        !input.txdate
-    ) {
-        throw new Error("All fields in Transac are mandatory. Please provide complete input.");
-    }
-
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-
     // Add the transaction
     const existingTransactions = seTransactionTable.get(input.walletPublicKey) || "[]";
     const transactions = JSON.parse<Array<Transac>>(existingTransactions);
@@ -183,7 +171,6 @@ export function storeTransaction(input: Transac): void {
         success: true
     });
 }
-
 
 /**
  * @query
