@@ -166,10 +166,10 @@ export function storeTransaction(input: Transac): void {
         !input.currencycode ||
         !input.txdate
     ) {
-        Notifier.sendJson<StoreOutput>({
-            success: false
-            
-        });
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Invalid parameters: One or more required fields are missing"
+        });        
         return;
     }
 
@@ -188,10 +188,10 @@ export function storeTransaction(input: Transac): void {
         seTransactionTable.set("keysList", JSON.stringify(keys));
     }
 
-    // Notify success
     Notifier.sendJson<StoreOutput>({
         success: true
-    });
+});
+
 }
 
 
