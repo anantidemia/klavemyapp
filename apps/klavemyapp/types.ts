@@ -85,7 +85,7 @@ export class TransactionListOutput {
 }
 
 @serializable
-export class StoreKeys {
+export class StoredKeys {
     success!: boolean;
     walletPublicKeys!: string[]; // Array of key-value pair strings
 }

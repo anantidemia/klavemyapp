@@ -11,7 +11,7 @@ import {
     SecureElementOutputList,
     Transac,
     TransactionListOutput,
-    StoreKeys
+    StoredKeys
 } 
 from './types';
 import { getDate } from './utils';
@@ -233,7 +233,7 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
 
 /**
  * @query
- * Fetch all walletPublicKey values from the transaction list stored in the ledger,
+ * Fetch all unique walletPublicKey values from the transaction list stored in the ledger,
  * and return them as key-value pairs with keys in the format "WalletPublicKeyX".
  */
 export function listAllWalletPublicKeys(): void {
@@ -250,12 +250,13 @@ export function listAllWalletPublicKeys(): void {
     }
 
     // Parse the keysList to get the transaction keys
-    const transactionKeys: string[] = JSON.parse<string[]>(keysList);
-    const walletPublicKeys: string[] = [];
+    const transactionKeys = JSON.parse<string[]>(keysList);
+    const uniqueWalletPublicKeys = new Map<string, bool>(); // Use Map to emulate a Set
 
-    // Iterate over each key in the transaction table
+    // Iterate over each key in the transaction table using a for loop
     for (let i = 0; i < transactionKeys.length; i++) {
-        const transactionData = seTransactionTable.get(transactionKeys[i]);
+        const transactionKey = transactionKeys[i];
+        const transactionData = seTransactionTable.get(transactionKey);
 
         // Skip if no data for this key
         if (!transactionData || transactionData.trim() === "") {
@@ -263,31 +264,40 @@ export function listAllWalletPublicKeys(): void {
         }
 
         // Parse the transaction list for this key
-        const transactions: Transac[] = JSON.parse<Transac[]>(transactionData);
+        const transactions = JSON.parse<Transac[]>(transactionData);
 
         // Extract walletPublicKey from each transaction
         for (let j = 0; j < transactions.length; j++) {
             const walletPublicKey = transactions[j].walletPublicKey;
 
-            // Add only non-empty walletPublicKeys
+            // Add non-empty and unique walletPublicKeys to the Map
             if (walletPublicKey && walletPublicKey.trim() !== "") {
-                walletPublicKeys.push(walletPublicKey);
-                seTransactionTable.set("keysList", JSON.stringify(walletPublicKey));
+                uniqueWalletPublicKeys.set(walletPublicKey, true);
             }
         }
     }
 
+    // Convert the Map keys to an Array manually
+    const uniqueKeysArray: string[] = [];
+    const mapKeys = uniqueWalletPublicKeys.keys(); // Get all keys from the Map
+    for (let k = 0; k < mapKeys.length; k++) {
+        uniqueKeysArray.push(mapKeys[k]);
+    }
+
     // Generate key-value pairs in the format "WalletPublicKeyX: walletPublicKey"
-    const keyValuePairs = walletPublicKeys.map<string>((key: string, index: i32): string => {
-        return `WalletPublicKey${index + 1}: ${key}`;
-    });
+    const keyValuePairs: string[] = [];
+    for (let i = 0; i < uniqueKeysArray.length; i++) {
+        keyValuePairs.push(`WalletPublicKey${i + 1}: ${uniqueKeysArray[i]}`);
+    }
 
     // Send the result back as a response
-    Notifier.sendJson<StoreKeys>({
+    Notifier.sendJson<StoredKeys>({
         success: true,
         walletPublicKeys: keyValuePairs,
     });
 }
+
+
 /**
  * @transaction
  * Deletes all transaction logs and data stored in the transaction_table and seTransactionTable.
