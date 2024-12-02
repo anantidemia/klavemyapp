@@ -152,6 +152,27 @@ export function listSecureElement(): void {
  */
 export function storeTransaction(input: Transac): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+
+    // Validate input
+    if (
+        !input.walletPublicKey ||
+        !input.synchronizationDate ||
+        !input.transactionName ||
+        !input.FromID ||
+        !input.ToID ||
+        !input.nonce ||
+        !input.amount ||
+        !input.generation ||
+        !input.currencycode ||
+        !input.txdate
+    ) {
+        Notifier.sendJson<StoreOutput>({
+            success: false
+            
+        });
+        return;
+    }
+
     // Add the transaction
     const existingTransactions = seTransactionTable.get(input.walletPublicKey) || "[]";
     const transactions = JSON.parse<Array<Transac>>(existingTransactions);
@@ -167,10 +188,12 @@ export function storeTransaction(input: Transac): void {
         seTransactionTable.set("keysList", JSON.stringify(keys));
     }
 
+    // Notify success
     Notifier.sendJson<StoreOutput>({
         success: true
     });
 }
+
 
 /**
  * @query
