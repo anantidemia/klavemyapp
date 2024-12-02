@@ -55,19 +55,6 @@ export class SecureElementOutputList {
     seList!: SecureElement[];
 }
 
-interface ITransacInput {
-    walletPublicKey: string;
-    synchronizationDate: string;
-    transactionName: string;
-    FromID: string;
-    ToID: string;
-    nonce: string;
-    amount: string;
-    generation: string;
-    currencycode: string;
-    txdate: string;
-}
-
 @serializable
 export class Transac {
     walletPublicKey!: string;
@@ -80,7 +67,6 @@ export class Transac {
     generation!: string;
     currencycode!: string;
     txdate!: string;
-
 }
 
 @serializable
