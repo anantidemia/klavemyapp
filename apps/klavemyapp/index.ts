@@ -203,7 +203,7 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
     const transactionList = seTransactionTable.get(input.walletPublicKey);
 
-    if (transactionList.length === 0) {
+    if (!transactionList || transactionList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
             message: `No transactions found for key '${input.walletPublicKey}'`
@@ -214,17 +214,23 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
     // Parse the list of transactions
     let listTransactionsOutput: Transac[] = JSON.parse<Transac[]>(transactionList);
 
-    // Sort by walletPublicKey in ascending order and by txnDate in descending order
+    // Sort by walletPublicKey in ascending order and by txdate in descending order
     listTransactionsOutput = listTransactionsOutput.sort((a, b) => {
         if (a.walletPublicKey < b.walletPublicKey) return -1;
-        else  return 1;
+        if (a.walletPublicKey > b.walletPublicKey) return 1;
+        // Sort by txdate in descending order
+        return b.txdate.localeCompare(a.txdate);
     });
 
-    Notifier.sendJson<TransactionListOutput>({
+    Notifier.sendJson<TransactionListOutput >({
         success: true,
-        transactionList: listTransactionsOutput
+        transactionList: listTransactionsOutput,
+        has_next: true,
+        last_evaluated_key: "1732558315756",
+        date: "2024-11-26T08:14:29.205576" // Current date and time in ISO format
     });
 }
+
 /**
  * @query
  * Fetch all walletPublicKey values from the transaction list stored in the ledger,

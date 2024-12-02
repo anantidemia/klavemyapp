@@ -79,6 +79,9 @@ export class SecureElementTransaction {
 export class TransactionListOutput {
     success!: boolean;
     transactionList!: Transac[];
+    has_next: boolean;
+    last_evaluated_key: string;
+    date: string
 }
 
 @serializable
