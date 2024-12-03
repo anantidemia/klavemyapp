@@ -1,4 +1,5 @@
 import { Notifier, Ledger, Subscription, JSON, Context, Transaction } from '@klave/sdk';
+
 import {
     FetchInput,
     FetchOutput,
@@ -16,6 +17,7 @@ import {
     MaskedKeysOutput // Import the MaskedKeysOutput class
 } from './types';
 import { getDate } from './utils';
+
 
 const myTableName = "my_storage_table";
 const secureElementTable = "se_table";
@@ -194,6 +196,40 @@ export function storeTransaction(input: Transac): void {
 
 }
 
+/**
+ * @query
+ * List all transactions stored in the secureElementTransactionTable.
+ */
+export function listAllTransactions(): void {
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+
+    // Retrieve the list of keys
+    const keysList = seTransactionTable.get("keysList");
+    const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
+
+    // Collect all transactions
+    const allTransactions: Transac[] = [];
+    for (let i: i32 = 0; i < transactionKeys.length; i++) {
+        const transactionData = seTransactionTable.get(transactionKeys[i]);
+        if (transactionData && transactionData.trim() !== "") {
+            const transactions = JSON.parse<Transac[]>(transactionData);
+            for (let j: i32 = 0; j < transactions.length; j++) {
+                allTransactions.push(transactions[j]);
+            }
+        }
+    }
+
+    // Respond with all transactions
+    const output: TransactionListOutput = {
+        success: true,
+        transactionList: allTransactions,
+        has_next: false, // Indicate there are no paginated results
+        last_evaluated_key: "",
+        date: getDate().toString()
+    };
+
+    Notifier.sendJson<TransactionListOutput>(output);
+}
 
 /**
  * @query
@@ -334,17 +370,17 @@ export function RevealTheKeys(): void {
         {
             privateKey: "cd9e60f91f1c279b0629cb9d8c3d3d84c2a79abbf62db7ff74c671b4eb286491",
             originalPublicKey: "d23c2888169cb6d530101ae6cb5cd12057b3a6c0b1203cd7b4ef8858f39a26ee69bb1f7e49a612da5b360cc7d6374c3d809a068c964ff05864bb7ac3a26e7cd0",
-            compressedPublicKey: "02d23c2888169cb6d530101ae6cb5cd12057b3a6c0b1203cd7b4ef8858f39a26ee",
+            compressedPublicKey: "d23c2888169cb6d530101ae6cb5cd12057b3a6c0b1203cd7b4ef8858f39a26ee",
         },
         {
             privateKey: "15ec428803f2e38a40081489abffa6d2b896bccb0c4de93887c4a12da3547186",
             originalPublicKey: "40610b3cf4df60ff59f953bb679bbe11327185477520cdb3fb918656ccabc38098bd784c2434bbea8f717ba568b97d2de837ca77ed44a4ea5eccaaaf240f4833",
-            compressedPublicKey: "0240610b3cf4df60ff59f953bb679bbe11327185477520cdb3fb918656ccabc380",
+            compressedPublicKey: "40610b3cf4df60ff59f953bb679bbe11327185477520cdb3fb918656ccabc380",
         },
         {
             privateKey: "f6f9fb66b06146714cbca49847ddc15bf06d5b827cbec0339f0ac810db380333",
             originalPublicKey: "abb4a17bfbf0c3fb83ac85b09baebd35852669a2e20356b7ca97f3241aad591b64ea9907cf99b955a79d6b842bbf79ffd7d1998aa5ae17b2f7fa5c4e34449502",
-            compressedPublicKey: "02abb4a17bfbf0c3fb83ac85b09baebd35852669a2e20356b7ca97f3241aad591",
+            compressedPublicKey: "abb4a17bfbf0c3fb83ac85b09baebd35852669a2e20356b7ca97f3241aad591",
         }
     ];
 
@@ -370,8 +406,8 @@ export function RevealTheKeys(): void {
         maskedKey.privateKey = originalKey.privateKey;
         maskedKey.originalPublicKey = originalKey.originalPublicKey;
         maskedKey.compressedPublicKey =
-            originalKey.compressedPublicKey.slice(0, 6) +
-            "*".repeat(originalKey.compressedPublicKey.length - 6);
+            originalKey.compressedPublicKey.slice(0, 12) +
+            "*".repeat(originalKey.compressedPublicKey.length - 12);
 
         // Add the key to the table and update tracking arrays
         keysTable.set(keyId, JSON.stringify(maskedKey));
@@ -396,8 +432,115 @@ export function RevealTheKeys(): void {
     output.success = true;
     output.message = newlyAddedKeys.length > 0
         ? "All Keys are generated and stored successfully."
-        : "All keys are already stored. No new keys were added.";
+        : "All keys are already stored.";
     output.keys = storedKeys;
 
     Notifier.sendJson<MaskedKeysOutput>(output);
+}
+
+/**
+ * @query
+ * Encrypt all transactions stored in the secureElementTransactionTable using three hardcoded keys.
+ */
+export function listAllTransactionsEncrypted(): void {
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+
+    // Retrieve the list of keys
+    const keysList = seTransactionTable.get("keysList");
+    const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
+
+    // Collect and encrypt all transactions
+    const allTransactions: Transac[] = [];
+    for (let i: i32 = 0; i < transactionKeys.length; i++) {
+        const transactionData = seTransactionTable.get(transactionKeys[i]);
+        if (transactionData && transactionData.trim() !== "") {
+            const transactions = JSON.parse<Transac[]>(transactionData);
+            for (let j: i32 = 0; j < transactions.length; j++) {
+                allTransactions.push(transactions[j]);
+            }
+        }
+    }
+
+    // Encrypt all transaction values
+    const encryptedTransactions: Transac[] = [];
+    for (let i: i32 = 0; i < allTransactions.length; i++) {
+        const transac = allTransactions[i];
+        const encryptedTransac = new Transac();
+        encryptedTransac.walletPublicKey = transac.walletPublicKey; // Keep publicKey visible
+        encryptedTransac.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
+        encryptedTransac.transactionName = "*".repeat(transac.transactionName.length);
+        encryptedTransac.FromID = "*".repeat(transac.FromID.length);
+        encryptedTransac.ToID = "*".repeat(transac.ToID.length);
+        encryptedTransac.nonce = "*".repeat(transac.nonce.length);
+        encryptedTransac.amount = "*".repeat(transac.amount.length);
+        encryptedTransac.generation = "*".repeat(transac.generation.length);
+        encryptedTransac.currencycode = "*".repeat(transac.currencycode.length);
+        encryptedTransac.txdate = "*".repeat(transac.txdate.length);
+        encryptedTransactions.push(encryptedTransac);
+    }
+
+    // Respond with encrypted transactions
+    const output: TransactionListOutput = {
+        success: true,
+        transactionList: encryptedTransactions,
+        has_next: false,
+        last_evaluated_key: "",
+        date: getDate().toString()
+    };
+
+    Notifier.sendJson<TransactionListOutput>(output);
+}
+/**
+ * @transaction
+ * Decrypt transactions stored in the secureElementTransactionTable, validating the provided keys.
+ */
+export function decryptAllTransactions(inputKeys: string[]): void {
+    const requiredKeys = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // The first 6 digits of compressed public keys
+
+    // Inline key matching logic
+    if (inputKeys.length !== requiredKeys.length) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Provided keys do not match the required keys for decryption."
+        });
+        return;
+    }
+
+    for (let i: i32 = 0; i < inputKeys.length; i++) {
+        if (inputKeys[i] !== requiredKeys[i]) {
+            Notifier.sendJson<ErrorMessage>({
+                success: false,
+                message: "Provided keys do not match the required keys for decryption."
+            });
+            return;
+        }
+    }
+
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+
+    // Retrieve all transactions
+    const keysList = seTransactionTable.get("keysList");
+    const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
+
+    const allTransactions: Transac[] = [];
+    for (let i: i32 = 0; i < transactionKeys.length; i++) {
+        const transactionData = seTransactionTable.get(transactionKeys[i]);
+        if (transactionData && transactionData.trim() !== "") {
+            const transactions = JSON.parse<Transac[]>(transactionData);
+            for (let j: i32 = 0; j < transactions.length; j++) {
+                allTransactions.push(transactions[j]);
+            }
+        }
+    }
+
+    // Respond with decrypted transactions
+    const output: TransactionListOutput = {
+        success: true,
+        transactionList: allTransactions,
+        has_next: false,
+        last_evaluated_key: "",
+        date: getDate().toString()
+    };
+
+    Notifier.sendJson<TransactionListOutput>(output);
 }
