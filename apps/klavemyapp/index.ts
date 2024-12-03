@@ -401,13 +401,13 @@ export function RevealTheKeys(): void {
             continue;
         }
 
-        // Mask the key and add it to the array
+        // Mask the key to reveal the first 12 characters
         const maskedKey = new Key();
         maskedKey.privateKey = originalKey.privateKey;
         maskedKey.originalPublicKey = originalKey.originalPublicKey;
         maskedKey.compressedPublicKey =
-            originalKey.compressedPublicKey.slice(0, 6) +
-            "*".repeat(originalKey.compressedPublicKey.length - 6);
+            originalKey.compressedPublicKey.slice(0, 12) +
+            "*".repeat(originalKey.compressedPublicKey.length - 12);
 
         // Add the key to the table and update tracking arrays
         keysTable.set(keyId, JSON.stringify(maskedKey));
@@ -437,6 +437,7 @@ export function RevealTheKeys(): void {
 
     Notifier.sendJson<MaskedKeysOutput>(output);
 }
+
 
 /**
  * @query
