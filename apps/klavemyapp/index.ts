@@ -401,12 +401,12 @@ export function RevealTheKeys(): void {
             continue;
         }
 
-        // Mask the key to reveal the first 12 characters
+        // Mask the key and add it to the array
         const maskedKey = new Key();
         maskedKey.privateKey = originalKey.privateKey;
         maskedKey.originalPublicKey = originalKey.originalPublicKey;
         maskedKey.compressedPublicKey =
-            originalKey.compressedPublicKey.slice(0, 12) +
+            originalKey.compressedPublicKey.slice(0, 13) +
             "*".repeat(originalKey.compressedPublicKey.length - 12);
 
         // Add the key to the table and update tracking arrays
@@ -438,13 +438,11 @@ export function RevealTheKeys(): void {
     Notifier.sendJson<MaskedKeysOutput>(output);
 }
 
-
 /**
  * @query
  * Encrypt all transactions stored in the secureElementTransactionTable using three hardcoded keys.
  */
 export function listAllTransactionsEncrypted(): void {
-    const encryptionKeys = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"];
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
     // Retrieve the list of keys
@@ -468,18 +466,16 @@ export function listAllTransactionsEncrypted(): void {
     for (let i: i32 = 0; i < allTransactions.length; i++) {
         const transac = allTransactions[i];
         const encryptedTransac = new Transac();
-
-        // Keep first 12 characters visible and mask the rest
-        encryptedTransac.walletPublicKey = transac.walletPublicKey; // Public Key remains visible
-        encryptedTransac.synchronizationDate = transac.synchronizationDate.slice(0, 12) + "*".repeat(transac.synchronizationDate.length - 12);
-        encryptedTransac.transactionName = transac.transactionName.slice(0, 12) + "*".repeat(transac.transactionName.length - 12);
-        encryptedTransac.FromID = transac.FromID.slice(0, 12) + "*".repeat(transac.FromID.length - 12);
-        encryptedTransac.ToID = transac.ToID.slice(0, 12) + "*".repeat(transac.ToID.length - 12);
-        encryptedTransac.nonce = transac.nonce.slice(0, 12) + "*".repeat(transac.nonce.length - 12);
-        encryptedTransac.amount = transac.amount.slice(0, 12) + "*".repeat(transac.amount.length - 12);
-        encryptedTransac.generation = transac.generation.slice(0, 12) + "*".repeat(transac.generation.length - 12);
-        encryptedTransac.currencycode = transac.currencycode.slice(0, 12) + "*".repeat(transac.currencycode.length - 12);
-        encryptedTransac.txdate = transac.txdate.slice(0, 12) + "*".repeat(transac.txdate.length - 12);
+        encryptedTransac.walletPublicKey = transac.walletPublicKey; // Keep publicKey visible
+        encryptedTransac.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
+        encryptedTransac.transactionName = "*".repeat(transac.transactionName.length);
+        encryptedTransac.FromID = "*".repeat(transac.FromID.length);
+        encryptedTransac.ToID = "*".repeat(transac.ToID.length);
+        encryptedTransac.nonce = "*".repeat(transac.nonce.length);
+        encryptedTransac.amount = "*".repeat(transac.amount.length);
+        encryptedTransac.generation = "*".repeat(transac.generation.length);
+        encryptedTransac.currencycode = "*".repeat(transac.currencycode.length);
+        encryptedTransac.txdate = "*".repeat(transac.txdate.length);
         encryptedTransactions.push(encryptedTransac);
     }
 
@@ -494,13 +490,12 @@ export function listAllTransactionsEncrypted(): void {
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
-
 /**
  * @transaction
  * Decrypt transactions stored in the secureElementTransactionTable, validating the provided keys.
  */
 export function decryptAllTransactions(inputKeys: string[]): void {
-    const requiredKeys = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"];
+    const requiredKeys = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // The first 6 digits of compressed public keys
 
     // Inline key matching logic
     if (inputKeys.length !== requiredKeys.length) {
