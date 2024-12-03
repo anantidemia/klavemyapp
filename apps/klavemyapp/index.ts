@@ -348,10 +348,23 @@ export function initializeAndMaskKeys(): void {
         }
     ];
 
-    // Mask the compressed public keys
+    // Check existing keys in the table
+    const keysTable = Ledger.getTable(keysTableName);
+    const existingKeysList = keysTable.get("keyList");
+    const existingKeyIds: string[] = existingKeysList ? JSON.parse<string[]>(existingKeysList) : [];
+
+    // Mask the compressed public keys and filter out already stored keys
     const maskedKeys: Key[] = [];
     for (let i: i32 = 0; i < hardcodedKeys.length; i++) {
         const originalKey = hardcodedKeys[i];
+        const keyId = `Key${i + 1}`;
+
+        // Skip if the key is already stored
+        if (existingKeyIds.includes(keyId)) {
+            continue;
+        }
+
+        // Mask the key and add it to the array
         const maskedKey = new Key();
         maskedKey.privateKey = originalKey.privateKey;
         maskedKey.originalPublicKey = originalKey.originalPublicKey;
@@ -359,25 +372,21 @@ export function initializeAndMaskKeys(): void {
             originalKey.compressedPublicKey.slice(0, 6) +
             "*".repeat(originalKey.compressedPublicKey.length - 6);
         maskedKeys.push(maskedKey);
+
+        // Add the key to the table
+        keysTable.set(keyId, JSON.stringify(maskedKey));
+        existingKeyIds.push(keyId);
     }
 
-    // Save masked keys to the table
-    const keysTable = Ledger.getTable(keysTableName);
-    for (let i: i32 = 0; i < maskedKeys.length; i++) {
-        keysTable.set(`Key${i + 1}`, JSON.stringify(maskedKeys[i]));
-    }
+    // Update the key list in the table
+    keysTable.set("keyList", JSON.stringify(existingKeyIds));
 
-    // Save key identifiers
-    const keyIds: string[] = [];
-    for (let i: i32 = 0; i < maskedKeys.length; i++) {
-        keyIds.push(`Key${i + 1}`);
-    }
-    keysTable.set("keyList", JSON.stringify(keyIds));
-
-    // Respond with success and the masked keys
+    // Respond with success and the new masked keys
     const output = new MaskedKeysOutput();
     output.success = true;
-    output.message = "Hardcoded keys have been masked, stored, and are now accessible.";
+    output.message = maskedKeys.length > 0
+        ? "The Keys are Generated Successfully."
+        : "All keys are already stored. No new keys were added.";
     output.keys = maskedKeys;
 
     Notifier.sendJson<MaskedKeysOutput>(output);
