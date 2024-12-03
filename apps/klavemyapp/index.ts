@@ -326,7 +326,7 @@ export function deleteAllTransactionLogs(): void {
 /**
  * @transaction
  */
-export function initializeAndMaskKeys(): void {
+export function RevealTheKeys(): void {
     const keysTableName = "keys_storage_table";
 
     // Hardcoded keys
