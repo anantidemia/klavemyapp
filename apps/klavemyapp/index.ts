@@ -353,8 +353,9 @@ export function RevealTheKeys(): void {
     const existingKeysList = keysTable.get("keyList");
     const existingKeyIds: string[] = existingKeysList ? JSON.parse<string[]>(existingKeysList) : [];
 
-    // Mask the compressed public keys and filter out already stored keys
-    const maskedKeys: Key[] = [];
+    // Track newly added keys
+    const newlyAddedKeys: Key[] = [];
+
     for (let i: i32 = 0; i < hardcodedKeys.length; i++) {
         const originalKey = hardcodedKeys[i];
         const keyId = `Key${i + 1}`;
@@ -371,23 +372,32 @@ export function RevealTheKeys(): void {
         maskedKey.compressedPublicKey =
             originalKey.compressedPublicKey.slice(0, 6) +
             "*".repeat(originalKey.compressedPublicKey.length - 6);
-        maskedKeys.push(maskedKey);
 
-        // Add the key to the table
+        // Add the key to the table and update tracking arrays
         keysTable.set(keyId, JSON.stringify(maskedKey));
         existingKeyIds.push(keyId);
+        newlyAddedKeys.push(maskedKey);
     }
 
     // Update the key list in the table
     keysTable.set("keyList", JSON.stringify(existingKeyIds));
 
-    // Respond with success and the new masked keys
+    // Fetch all stored keys for the response
+    const storedKeys: Key[] = [];
+    for (let i: i32 = 0; i < existingKeyIds.length; i++) {
+        const storedKeyData = keysTable.get(existingKeyIds[i]);
+        if (storedKeyData) {
+            storedKeys.push(JSON.parse<Key>(storedKeyData));
+        }
+    }
+
+    // Respond with success and all stored keys
     const output = new MaskedKeysOutput();
     output.success = true;
-    output.message = maskedKeys.length > 0
-        ? "The Keys are Generated Successfully."
+    output.message = newlyAddedKeys.length > 0
+        ? "All Keys are generated and stored successfully."
         : "All keys are already stored. No new keys were added.";
-    output.keys = maskedKeys;
+    output.keys = storedKeys;
 
     Notifier.sendJson<MaskedKeysOutput>(output);
 }
