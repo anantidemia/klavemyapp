@@ -12,15 +12,14 @@ import {
     Transac,
     TransactionListOutput,
     StoredKeys,
-    GeneratedKeys
-} 
-from './types';
+    Key, // Import the Key class
+    MaskedKeysOutput // Import the MaskedKeysOutput class
+} from './types';
 import { getDate } from './utils';
 
 const myTableName = "my_storage_table";
 const secureElementTable = "se_table";
 const secureElementTransactionTable = "transaction_table";
-
 /**
  * @query
  * @param {FetchInput} input - A parsed input argument
@@ -323,29 +322,63 @@ export function deleteAllTransactionLogs(): void {
         success: true
     });
 }
+
 /**
- * @query
- * Generates three keys based on an input key.
- * @param {FetchInput} input - Input containing the base key.
+ * @transaction
  */
-export function generateKeys(input: FetchInput): void {
-    // Validate the input key
-    if (!input.key || input.key.trim() === "") {
-        // Prepare an error response
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "Input key is missing or invalid.",
-        });
-        return;
+export function initializeAndMaskKeys(): void {
+    const keysTableName = "keys_storage_table";
+
+    // Hardcoded keys
+    const hardcodedKeys: Key[] = [
+        {
+            privateKey: "cd9e60f91f1c279b0629cb9d8c3d3d84c2a79abbf62db7ff74c671b4eb286491",
+            originalPublicKey: "d23c2888169cb6d530101ae6cb5cd12057b3a6c0b1203cd7b4ef8858f39a26ee69bb1f7e49a612da5b360cc7d6374c3d809a068c964ff05864bb7ac3a26e7cd0",
+            compressedPublicKey: "02d23c2888169cb6d530101ae6cb5cd12057b3a6c0b1203cd7b4ef8858f39a26ee",
+        },
+        {
+            privateKey: "15ec428803f2e38a40081489abffa6d2b896bccb0c4de93887c4a12da3547186",
+            originalPublicKey: "40610b3cf4df60ff59f953bb679bbe11327185477520cdb3fb918656ccabc38098bd784c2434bbea8f717ba568b97d2de837ca77ed44a4ea5eccaaaf240f4833",
+            compressedPublicKey: "0240610b3cf4df60ff59f953bb679bbe11327185477520cdb3fb918656ccabc380",
+        },
+        {
+            privateKey: "f6f9fb66b06146714cbca49847ddc15bf06d5b827cbec0339f0ac810db380333",
+            originalPublicKey: "abb4a17bfbf0c3fb83ac85b09baebd35852669a2e20356b7ca97f3241aad591b64ea9907cf99b955a79d6b842bbf79ffd7d1998aa5ae17b2f7fa5c4e34449502",
+            compressedPublicKey: "02abb4a17bfbf0c3fb83ac85b09baebd35852669a2e20356b7ca97f3241aad591",
+        }
+    ];
+
+    // Mask the compressed public keys
+    const maskedKeys: Key[] = [];
+    for (let i: i32 = 0; i < hardcodedKeys.length; i++) {
+        const originalKey = hardcodedKeys[i];
+        const maskedKey = new Key();
+        maskedKey.privateKey = originalKey.privateKey;
+        maskedKey.originalPublicKey = originalKey.originalPublicKey;
+        maskedKey.compressedPublicKey =
+            originalKey.compressedPublicKey.slice(0, 6) +
+            "*".repeat(originalKey.compressedPublicKey.length - 6);
+        maskedKeys.push(maskedKey);
     }
 
-    // Generate the keys
-    const generatedKeys = new GeneratedKeys();
-    generatedKeys.success = true;
-    generatedKeys.keys.key1 = input.key;
-    generatedKeys.keys.key2 = input.key + "1";
-    generatedKeys.keys.key3 = input.key + "2";
+    // Save masked keys to the table
+    const keysTable = Ledger.getTable(keysTableName);
+    for (let i: i32 = 0; i < maskedKeys.length; i++) {
+        keysTable.set(`Key${i + 1}`, JSON.stringify(maskedKeys[i]));
+    }
 
-    // Return the keys
-    Notifier.sendJson<GeneratedKeys>(generatedKeys);
+    // Save key identifiers
+    const keyIds: string[] = [];
+    for (let i: i32 = 0; i < maskedKeys.length; i++) {
+        keyIds.push(`Key${i + 1}`);
+    }
+    keysTable.set("keyList", JSON.stringify(keyIds));
+
+    // Respond with success and the masked keys
+    const output = new MaskedKeysOutput();
+    output.success = true;
+    output.message = "Hardcoded keys have been masked, stored, and are now accessible.";
+    output.keys = maskedKeys;
+
+    Notifier.sendJson<MaskedKeysOutput>(output);
 }

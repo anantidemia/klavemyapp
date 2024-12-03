@@ -1,20 +1,18 @@
-import { JSON } from '@klave/sdk';
 
 @serializable
 export class ErrorMessage {
-    success!: boolean;
+    success: boolean = false;
     message!: string;
 }
 
 @serializable
 export class FetchInput {
     key!: string;
-
 }
 
 @serializable
 export class FetchOutput {
-    success!: boolean;
+    success: boolean = true;
     value!: string;
 }
 
@@ -26,7 +24,7 @@ export class StoreInput {
 
 @serializable
 export class StoreOutput {
-    success!: boolean;
+    success: boolean = true;
 }
 
 @serializable
@@ -45,13 +43,13 @@ export class SecureElement {
 
 @serializable
 export class SecureElementOutput {
-    success!: boolean;
+    success: boolean = true;
     secureElement!: string;
 }
 
 @serializable
 export class SecureElementOutputList {
-    success!: boolean;
+    success: boolean = true;
     seList!: SecureElement[];
 }
 
@@ -77,27 +75,31 @@ export class SecureElementTransaction {
 
 @serializable
 export class TransactionListOutput {
-    success!: boolean;
+    success: boolean = true;
     transactionList!: Transac[];
-    has_next: boolean;
-    last_evaluated_key: string;
-    date: string
+    has_next!: boolean;
+    last_evaluated_key!: string;
+    date!: string;
 }
 
 @serializable
 export class StoredKeys {
-    success!: boolean;
+    success: boolean = true;
     walletPublicKeys!: string[]; // Array of key-value pair strings
 }
+/**
+ * A class representing the response structure for masked keys.
+ */
 @serializable
-export class GeneratedKeys {
-    success: boolean = false;
-    keys: Keys = new Keys();
+export class Key {
+    privateKey: string = ""; // Default initialization
+    originalPublicKey: string = "";
+    compressedPublicKey: string = "";
 }
 
 @serializable
-class Keys {
-    key1: string = "";
-    key2: string = "";
-    key3: string = "";
+export class MaskedKeysOutput {
+    success: boolean = true;
+    message: string = "";
+    keys: Key[] = [];
 }
