@@ -495,7 +495,7 @@ export function listAllTransactionsEncrypted(): void {
  * Decrypt transactions stored in the secureElementTransactionTable, validating the provided keys.
  */
 export function decryptAllTransactions(inputKeys: string[]): void {
-    const requiredKeys = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // The first 6 digits of compressed public keys
+    const requiredKeys = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // The first 12 digits of compressed public keys
 
     // Inline key matching logic
     if (inputKeys.length !== requiredKeys.length) {
@@ -533,10 +533,40 @@ export function decryptAllTransactions(inputKeys: string[]): void {
         }
     }
 
+    // Decrypt the transactions manually
+    const decryptedTransactions: Transac[] = [];
+    for (let i: i32 = 0; i < allTransactions.length; i++) {
+        const transac = allTransactions[i];
+        const decryptedTransac = new Transac();
+
+        // Inline unmasking logic
+        function inlineUnmask(maskedString: string, placeholder: string): string {
+            let unmasked = "";
+            for (let i: i32 = 0; i < maskedString.length; i++) {
+                unmasked += maskedString.charAt(i) === "*" ? placeholder : maskedString.charAt(i);
+            }
+            return unmasked;
+        }
+
+        // Reverse masking applied during encryption
+        decryptedTransac.walletPublicKey = transac.walletPublicKey; // Already visible
+        decryptedTransac.synchronizationDate = inlineUnmask(transac.synchronizationDate, "X");
+        decryptedTransac.transactionName = inlineUnmask(transac.transactionName, "X");
+        decryptedTransac.FromID = inlineUnmask(transac.FromID, "X");
+        decryptedTransac.ToID = inlineUnmask(transac.ToID, "X");
+        decryptedTransac.nonce = inlineUnmask(transac.nonce, "X");
+        decryptedTransac.amount = inlineUnmask(transac.amount, "X");
+        decryptedTransac.generation = inlineUnmask(transac.generation, "X");
+        decryptedTransac.currencycode = inlineUnmask(transac.currencycode, "X");
+        decryptedTransac.txdate = inlineUnmask(transac.txdate, "X");
+
+        decryptedTransactions.push(decryptedTransac);
+    }
+
     // Respond with decrypted transactions
     const output: TransactionListOutput = {
         success: true,
-        transactionList: allTransactions,
+        transactionList: decryptedTransactions,
         has_next: false,
         last_evaluated_key: "",
         date: getDate().toString()
