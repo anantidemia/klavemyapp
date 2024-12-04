@@ -195,6 +195,10 @@ export function storeTransaction(input: Transac): void {
     });
 }
 
+/**
+ * @query
+ * List all transactions stored in the secureElementTransactionTable.
+ */
 export function listAllTransactions(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
@@ -204,11 +208,11 @@ export function listAllTransactions(): void {
 
     // Collect all transactions
     const allTransactions: Transac[] = [];
-    for (let i = 0; i < transactionKeys.length; i++) {
+    for (let i: i32 = 0; i < transactionKeys.length; i++) {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
         if (transactionData && transactionData.trim() !== "") {
             const transactions = JSON.parse<Transac[]>(transactionData);
-            for (let j = 0; j < transactions.length; j++) {
+            for (let j: i32 = 0; j < transactions.length; j++) {
                 allTransactions.push(transactions[j]);
             }
         }
@@ -218,14 +222,13 @@ export function listAllTransactions(): void {
     const output: TransactionListOutput = {
         success: true,
         transactionList: allTransactions,
-        has_next: false,
+        has_next: false, // Indicate there are no paginated results
         last_evaluated_key: "",
         date: getDate().toString()
     };
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
-
 
 export function listTransactionsByWalletPublicKeys(input: SecureElementKey): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
