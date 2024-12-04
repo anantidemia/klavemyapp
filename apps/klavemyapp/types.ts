@@ -25,6 +25,7 @@ export class StoreInput {
 @serializable
 export class StoreOutput {
     success: boolean = true;
+    fraudStatus:boolean =false;
 }
 
 @serializable

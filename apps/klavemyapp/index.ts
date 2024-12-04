@@ -191,7 +191,8 @@ export function storeTransaction(input: Transac): void {
     }
 
     Notifier.sendJson<StoreOutput>({
-        success: true
+        success: true,
+        fraudStatus:false
 });
 
 }
@@ -355,14 +356,15 @@ export function deleteAllTransactionLogs(): void {
 
     // Confirm deletion
     Notifier.sendJson<StoreOutput>({
-        success: true
+        success: true,
+        fraudStatus:false
     });
 }
 
 /**
  * @transaction
  */
-export function RevealTheKeys(): void {
+export function revealTheKeys(): void {
     const keysTableName = "keys_storage_table";
 
     // Hardcoded keys
@@ -401,18 +403,10 @@ export function RevealTheKeys(): void {
             continue;
         }
 
-        // Mask the key and add it to the array
-        const maskedKey = new Key();
-        maskedKey.privateKey = originalKey.privateKey;
-        maskedKey.originalPublicKey = originalKey.originalPublicKey;
-        maskedKey.compressedPublicKey =
-            originalKey.compressedPublicKey.slice(0, 13) +
-            "*".repeat(originalKey.compressedPublicKey.length - 12);
-
         // Add the key to the table and update tracking arrays
-        keysTable.set(keyId, JSON.stringify(maskedKey));
+        keysTable.set(keyId, JSON.stringify(originalKey));
         existingKeyIds.push(keyId);
-        newlyAddedKeys.push(maskedKey);
+        newlyAddedKeys.push(originalKey);
     }
 
     // Update the key list in the table
@@ -442,7 +436,7 @@ export function RevealTheKeys(): void {
  * @query
  * Encrypt all transactions stored in the secureElementTransactionTable using three hardcoded keys.
  */
-export function listAllTransactionsEncrypted(): void {
+export function listAllTransactionsObfuscated(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
     // Retrieve the list of keys
@@ -494,14 +488,14 @@ export function listAllTransactionsEncrypted(): void {
  * @transaction
  * Decrypt transactions stored in the secureElementTransactionTable, validating the provided keys.
  */
-export function decryptAllTransactions(inputKeys: string[]): void {
+export function revealTheTransactions(inputKeys: string[]): void {
     const requiredKeys = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // The first 12 digits of compressed public keys
 
     // Inline key matching logic
     if (inputKeys.length !== requiredKeys.length) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: "Provided keys do not match the required keys for decryption."
+            message: "Provided keys do not match the required keys for Reveal the Transactions."
         });
         return;
     }
@@ -510,7 +504,7 @@ export function decryptAllTransactions(inputKeys: string[]): void {
         if (inputKeys[i] !== requiredKeys[i]) {
             Notifier.sendJson<ErrorMessage>({
                 success: false,
-                message: "Provided keys do not match the required keys for decryption."
+                message: "Provided keys do not match the required keys for Reveal the Transactions."
             });
             return;
         }
