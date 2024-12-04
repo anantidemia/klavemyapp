@@ -106,3 +106,7 @@ export class MaskedKeysOutput {
     message: string = "";
     keys: Key[] = [];
 }
+@serializable
+export class RevealTransactionsInput {
+    inputKeys: string[] = [];
+}

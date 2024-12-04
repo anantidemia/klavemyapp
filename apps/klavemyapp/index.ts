@@ -14,7 +14,8 @@ import {
     TransactionListOutput,
     StoredKeys,
     Key, // Import the Key class
-    MaskedKeysOutput // Import the MaskedKeysOutput class
+    MaskedKeysOutput, // Import the MaskedKeysOutput class
+    RevealTransactionsInput,
 } from './types';
 import { getDate } from './utils';
 
@@ -464,11 +465,14 @@ export function listAllTransactionsObfuscated(): void {
  * Show all transactions stored in the secureElementTransactionTable if all input keys match the required keys.
  * Otherwise, return an error message.
  */
-export function revealTransactions(inputKeys: string[]): void {
-    const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Initialize directly
+export function revealTransactions(inputString: string): void {
+    const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
 
-    // Validate input keys
-    if (inputKeys.length !== requiredKeys.length) {
+    // Safely parse the input string
+    const input = JSON.parse<RevealTransactionsInput>(inputString || "{}");
+
+    // Validate inputKeys
+    if (!input.inputKeys || input.inputKeys.length !== requiredKeys.length) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
             message: "Invalid number of keys provided for Reveal the Transactions."
@@ -477,20 +481,14 @@ export function revealTransactions(inputKeys: string[]): void {
     }
 
     // Ensure all keys match
-    let keysMatch = true;
     for (let i = 0; i < requiredKeys.length; i++) {
-        if (inputKeys[i] !== requiredKeys[i]) {
-            keysMatch = false;
-            break;
+        if (input.inputKeys[i] !== requiredKeys[i]) {
+            Notifier.sendJson<ErrorMessage>({
+                success: false,
+                message: "Provided keys do not match the required keys for Reveal the Transactions."
+            });
+            return;
         }
-    }
-
-    if (!keysMatch) {
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "Provided keys do not match the required keys for Reveal the Transactions."
-        });
-        return;
     }
 
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -510,7 +508,7 @@ export function revealTransactions(inputKeys: string[]): void {
         }
     }
 
-    // Respond with all transactions as-is
+    // Respond with all transactions
     const output: TransactionListOutput = {
         success: true,
         transactionList: allTransactions,
