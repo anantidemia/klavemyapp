@@ -364,6 +364,9 @@ export function deleteAllTransactionLogs(): void {
 /**
  * @transaction
  */
+/**
+ * @transaction
+ */
 export function revealTheKeys(): void {
     const keysTableName = "keys_storage_table";
 
@@ -386,48 +389,27 @@ export function revealTheKeys(): void {
         }
     ];
 
-    // Check existing keys in the table
+    // Access the keys table
     const keysTable = Ledger.getTable(keysTableName);
-    const existingKeysList = keysTable.get("keyList");
-    const existingKeyIds: string[] = existingKeysList ? JSON.parse<string[]>(existingKeysList) : [];
 
-    // Track newly added keys
-    const newlyAddedKeys: Key[] = [];
-
+    // Overwrite the key list with new data
+    const newKeyIds: string[] = [];
     for (let i: i32 = 0; i < hardcodedKeys.length; i++) {
-        const originalKey = hardcodedKeys[i];
+        const key = hardcodedKeys[i];
         const keyId = `Key${i + 1}`;
 
-        // Skip if the key is already stored
-        if (existingKeyIds.includes(keyId)) {
-            continue;
-        }
-
-        // Add the key to the table and update tracking arrays
-        keysTable.set(keyId, JSON.stringify(originalKey));
-        existingKeyIds.push(keyId);
-        newlyAddedKeys.push(originalKey);
+        keysTable.set(keyId, JSON.stringify(key));
+        newKeyIds.push(keyId);
     }
 
     // Update the key list in the table
-    keysTable.set("keyList", JSON.stringify(existingKeyIds));
+    keysTable.set("keyList", JSON.stringify(newKeyIds));
 
-    // Fetch all stored keys for the response
-    const storedKeys: Key[] = [];
-    for (let i: i32 = 0; i < existingKeyIds.length; i++) {
-        const storedKeyData = keysTable.get(existingKeyIds[i]);
-        if (storedKeyData) {
-            storedKeys.push(JSON.parse<Key>(storedKeyData));
-        }
-    }
-
-    // Respond with success and all stored keys
+    // Respond with success
     const output = new MaskedKeysOutput();
     output.success = true;
-    output.message = newlyAddedKeys.length > 0
-        ? "All Keys are generated and stored successfully."
-        : "All keys are already stored.";
-    output.keys = storedKeys;
+    output.message = "All previous keys overwritten and new keys stored successfully.";
+    output.keys = hardcodedKeys;
 
     Notifier.sendJson<MaskedKeysOutput>(output);
 }
