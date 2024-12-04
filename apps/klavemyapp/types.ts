@@ -66,7 +66,9 @@ export class Transac {
     generation!: string;
     currencycode!: string;
     txdate!: string;
+    fraudStatus: boolean = false; // New property with default value
 }
+
 
 @serializable
 export class SecureElementTransaction {

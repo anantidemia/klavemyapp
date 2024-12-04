@@ -148,10 +148,6 @@ export function listSecureElement(): void {
     });
 }
 
-/**
- * @transaction
- * @param {Transac} input - A parsed input argument
- */
 export function storeTransaction(input: Transac): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
@@ -175,6 +171,9 @@ export function storeTransaction(input: Transac): void {
         return;
     }
 
+    // Ensure fraudStatus is set to false
+    input.fraudStatus = false;
+
     // Add the transaction
     const existingTransactions = seTransactionTable.get(input.walletPublicKey) || "[]";
     const transactions = JSON.parse<Array<Transac>>(existingTransactions);
@@ -192,15 +191,10 @@ export function storeTransaction(input: Transac): void {
 
     Notifier.sendJson<StoreOutput>({
         success: true,
-        fraudStatus:false
-});
-
+        fraudStatus: false // Response indicates fraudStatus is false
+    });
 }
 
-/**
- * @query
- * List all transactions stored in the secureElementTransactionTable.
- */
 export function listAllTransactions(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
@@ -210,11 +204,11 @@ export function listAllTransactions(): void {
 
     // Collect all transactions
     const allTransactions: Transac[] = [];
-    for (let i: i32 = 0; i < transactionKeys.length; i++) {
+    for (let i = 0; i < transactionKeys.length; i++) {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
         if (transactionData && transactionData.trim() !== "") {
             const transactions = JSON.parse<Transac[]>(transactionData);
-            for (let j: i32 = 0; j < transactions.length; j++) {
+            for (let j = 0; j < transactions.length; j++) {
                 allTransactions.push(transactions[j]);
             }
         }
@@ -224,7 +218,7 @@ export function listAllTransactions(): void {
     const output: TransactionListOutput = {
         success: true,
         transactionList: allTransactions,
-        has_next: false, // Indicate there are no paginated results
+        has_next: false,
         last_evaluated_key: "",
         date: getDate().toString()
     };
@@ -232,10 +226,7 @@ export function listAllTransactions(): void {
     Notifier.sendJson<TransactionListOutput>(output);
 }
 
-/**
- * @query
- * @param {SecureElementKey} input - A parsed input argument
- */
+
 export function listTransactionsByWalletPublicKeys(input: SecureElementKey): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
     const transactionList = seTransactionTable.get(input.walletPublicKey);
@@ -255,16 +246,15 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
     listTransactionsOutput = listTransactionsOutput.sort((a, b) => {
         if (a.walletPublicKey < b.walletPublicKey) return -1;
         if (a.walletPublicKey > b.walletPublicKey) return 1;
-        // Sort by txdate in descending order
         return b.txdate.localeCompare(a.txdate);
     });
 
-    Notifier.sendJson<TransactionListOutput >({
+    Notifier.sendJson<TransactionListOutput>({
         success: true,
         transactionList: listTransactionsOutput,
-        has_next: true,
-        last_evaluated_key: "1732558315756",
-        date: "2024-11-26T08:14:29.205576" // Current date and time in ISO format
+        has_next: false,
+        last_evaluated_key: "",
+        date: getDate().toString()
     });
 }
 
