@@ -109,3 +109,8 @@ export class MaskedKeysOutput {
 export class RevealTransactionsInput {
     inputKeys: string[] = [];
 }
+@serializable
+export class WalletStatus {
+    walletPublicKey!: string;
+    fraudStatus: boolean = false;
+}

@@ -16,6 +16,7 @@ import {
     Key, // Import the Key class
     MaskedKeysOutput, // Import the MaskedKeysOutput class
     RevealTransactionsInput,
+    WalletStatus
 } from './types';
 import { getDate } from './utils';
 
@@ -296,7 +297,7 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
 /**
  * @query
  * Fetch all unique walletPublicKey values from the transaction list stored in the ledger,
- * and return them as key-value pairs with keys in the format "WalletPublicKeyX".
+ * and return them as key-value pairs with their fraudStatus.
  */
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -313,9 +314,9 @@ export function listAllWalletPublicKeys(): void {
 
     // Parse the keysList to get the transaction keys
     const transactionKeys = JSON.parse<string[]>(keysList);
-    const uniqueWalletPublicKeys = new Map<string, bool>(); // Use Map to emulate a Set
+    const uniqueWallets = new Array<WalletStatus>();
 
-    // Iterate over each key in the transaction table using a for loop
+    // Iterate over each key in the transaction table
     for (let i = 0; i < transactionKeys.length; i++) {
         const transactionKey = transactionKeys[i];
         const transactionData = seTransactionTable.get(transactionKey);
@@ -328,35 +329,48 @@ export function listAllWalletPublicKeys(): void {
         // Parse the transaction list for this key
         const transactions = JSON.parse<Transac[]>(transactionData);
 
-        // Extract walletPublicKey from each transaction
+        // Extract walletPublicKey and fraudStatus from each transaction
         for (let j = 0; j < transactions.length; j++) {
-            const walletPublicKey = transactions[j].walletPublicKey;
+            const transaction = transactions[j];
 
-            // Add non-empty and unique walletPublicKeys to the Map
-            if (walletPublicKey && walletPublicKey.trim() !== "") {
-                uniqueWalletPublicKeys.set(walletPublicKey, true);
+            // Check if walletPublicKey already exists in uniqueWallets
+            let existingEntry: WalletStatus | null = null;
+            for (let k = 0; k < uniqueWallets.length; k++) {
+                if (uniqueWallets[k].walletPublicKey === transaction.walletPublicKey) {
+                    existingEntry = uniqueWallets[k];
+                    break;
+                }
+            }
+
+            if (existingEntry) {
+                // Update fraudStatus if any transaction has fraud detected
+                existingEntry.fraudStatus = existingEntry.fraudStatus || transaction.fraudStatus;
+            } else {
+                // Add new walletPublicKey with fraudStatus
+                const newWalletStatus = new WalletStatus();
+                newWalletStatus.walletPublicKey = transaction.walletPublicKey;
+                newWalletStatus.fraudStatus = transaction.fraudStatus;
+                uniqueWallets.push(newWalletStatus);
             }
         }
     }
-    // Convert the Map keys to an Array manually
-    const uniqueKeysArray: string[] = [];
-    const mapKeys = uniqueWalletPublicKeys.keys(); // Get all keys from the Map
-    for (let k = 0; k < mapKeys.length; k++) {
-        uniqueKeysArray.push(mapKeys[k]);
-    }
 
-    // Generate key-value pairs in the format "WalletPublicKeyX: walletPublicKey"
-    const keyValuePairs: string[] = [];
-    for (let i = 0; i < uniqueKeysArray.length; i++) {
-        keyValuePairs.push(`WalletPublicKey${i + 1}: ${uniqueKeysArray[i]}`);
+    // Prepare response in the required format
+    const keyValuePairs = new Array<string>();
+    for (let i = 0; i < uniqueWallets.length; i++) {
+        const entry = uniqueWallets[i];
+        keyValuePairs.push(
+            `WalletPublicKey${i + 1}: ${entry.walletPublicKey}, FraudStatus: ${entry.fraudStatus}`
+        );
     }
 
     // Send the result back as a response
-    Notifier.sendJson<StoredKeys>({
-        success: true,
-        walletPublicKeys: keyValuePairs,
-    });
+    const output = new StoredKeys();
+    output.success = true;
+    output.walletPublicKeys = keyValuePairs;
+    Notifier.sendJson<StoredKeys>(output);
 }
+
 
 
 /**
