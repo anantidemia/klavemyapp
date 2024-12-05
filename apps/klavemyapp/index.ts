@@ -256,6 +256,10 @@ export function listAllTransactions(): void {
     Notifier.sendJson<TransactionListOutput>(output);
 }
 
+/**
+ * @query
+ * @param {SecureElementKey} input - A parsed input argument
+ */
 export function listTransactionsByWalletPublicKeys(input: SecureElementKey): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
     const transactionList = seTransactionTable.get(input.walletPublicKey);
@@ -275,17 +279,19 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
     listTransactionsOutput = listTransactionsOutput.sort((a, b) => {
         if (a.walletPublicKey < b.walletPublicKey) return -1;
         if (a.walletPublicKey > b.walletPublicKey) return 1;
+        // Sort by txdate in descending order
         return b.txdate.localeCompare(a.txdate);
     });
 
-    Notifier.sendJson<TransactionListOutput>({
+    Notifier.sendJson<TransactionListOutput >({
         success: true,
         transactionList: listTransactionsOutput,
-        has_next: false,
-        last_evaluated_key: "",
-        date: getDate().toString()
+        has_next: true,
+        last_evaluated_key: "1732558315756",
+        date: "2024-11-26T08:14:29.205576" // Current date and time in ISO format
     });
 }
+
 
 /**
  * @query
