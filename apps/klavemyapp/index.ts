@@ -307,7 +307,7 @@ export function listAllWalletPublicKeys(): void {
             }
         }
     }
-
+https://github.com/anantidemia
     // Convert the Map keys to an Array manually
     const uniqueKeysArray: string[] = [];
     const mapKeys = uniqueWalletPublicKeys.keys(); // Get all keys from the Map
@@ -460,25 +460,47 @@ export function listAllTransactionsObfuscated(): void {
  * @transaction
  * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
  */
-export function revealTransactions(input: RevealTransactionsInput): void {
-    const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
+export function revealTransactions(inputString: string): void {
+    // Define the required keys with explicit types
+    const requiredKeys: Map<string, string> = new Map<string, string>();
+    requiredKeys.set("Key1", "d23c2888169c");
+    requiredKeys.set("Key2", "40610b3cf4df");
+    requiredKeys.set("Key3", "abb4a17bfbf0");
 
-    // Validate the input directly
-    if (!input || !input.inputKeys || input.inputKeys.length !== requiredKeys.length) {
+    // Parse the input string into a Map
+    let inputObject: Map<string, Map<string, string>> | null = null;
+
+    if (inputString.trim() === "" || !inputString.includes("{") || !inputString.includes("}")) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: "Invalid number of keys provided for Reveal the Transactions."
+            message: "Invalid input format."
         });
         return;
     }
 
-    // Check if all keys match
-    let keysMatch = true;
-    for (let i = 0; i < requiredKeys.length; i++) {
-        if (requiredKeys[i] !== input.inputKeys[i]) {
-            keysMatch = false;
-            break;
-        }
+    // Safely parse the input string
+    inputObject = JSON.parse<Map<string, Map<string, string>>>(inputString);
+
+    if (!inputObject || !inputObject.has("inputKeys")) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Input keys are missing or invalid."
+        });
+        return;
+    }
+
+    const inputKeys = inputObject.get("inputKeys");
+    if (
+        !inputKeys ||
+        inputKeys.get("Key1") !== requiredKeys.get("Key1") ||
+        inputKeys.get("Key2") !== requiredKeys.get("Key2") ||
+        inputKeys.get("Key3") !== requiredKeys.get("Key3")
+    ) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Provided keys do not match the required keys."
+        });
+        return;
     }
 
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -496,21 +518,8 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             for (let j = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
 
-                // Reveal data if keys match; otherwise, show masked data
-                const transactionToAdd = new Transac();
-                transactionToAdd.walletPublicKey = transac.walletPublicKey;
-                transactionToAdd.synchronizationDate = keysMatch ? transac.synchronizationDate : "*".repeat(transac.synchronizationDate.length);
-                transactionToAdd.transactionName = keysMatch ? transac.transactionName : "*".repeat(transac.transactionName.length);
-                transactionToAdd.FromID = keysMatch ? transac.FromID : "*".repeat(transac.FromID.length);
-                transactionToAdd.ToID = keysMatch ? transac.ToID : "*".repeat(transac.ToID.length);
-                transactionToAdd.nonce = keysMatch ? transac.nonce : "*".repeat(transac.nonce.length);
-                transactionToAdd.amount = keysMatch ? transac.amount : "*".repeat(transac.amount.length);
-                transactionToAdd.generation = keysMatch ? transac.generation : "*".repeat(transac.generation.length);
-                transactionToAdd.currencycode = keysMatch ? transac.currencycode : "*".repeat(transac.currencycode.length);
-                transactionToAdd.txdate = keysMatch ? transac.txdate : "*".repeat(transac.txdate.length);
-                transactionToAdd.fraudStatus = transac.fraudStatus;
-
-                transactions.push(transactionToAdd);
+                // Add the transaction as is since the keys matched
+                transactions.push(transac);
             }
         }
     }
