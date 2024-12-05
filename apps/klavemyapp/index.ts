@@ -614,7 +614,7 @@ export function KeyDecryptorTransactions(input: RevealTransactionsInput): void {
                 const transactionToAdd = new Transac();
                 transactionToAdd.walletPublicKey = transac.walletPublicKey;
 
-                if (transac.fraudStatus || keysMatch) {
+                if (transac.fraudStatus && keysMatch) {
                     // Reveal all fields for fraud cases or when keys match
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
                     transactionToAdd.transactionName = transac.transactionName;
