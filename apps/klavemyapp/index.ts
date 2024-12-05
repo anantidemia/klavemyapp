@@ -540,10 +540,10 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 const transac = allTransactions[j];
 
                 const transactionToAdd = new Transac();
-                transactionToAdd.walletPublicKey = transac.walletPublicKey;
 
-                if (transac.fraudStatus && keysMatch) {
+                if (transac.fraudStatus || keysMatch) {
                     // Reveal all fields for fraud cases or when keys match
+                    transactionToAdd.walletPublicKey = transac.walletPublicKey;
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
                     transactionToAdd.transactionName = transac.transactionName;
                     transactionToAdd.FromID = transac.FromID;
@@ -554,7 +554,8 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.currencycode = transac.currencycode;
                     transactionToAdd.txdate = transac.txdate;
                 } else {
-                    // Mask fields if not fraud and keys don't match
+                    // Mask all sensitive fields if not fraud and keys don't match
+                    transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
                     transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
                     transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
                     transactionToAdd.FromID = "*".repeat(transac.FromID.length);
