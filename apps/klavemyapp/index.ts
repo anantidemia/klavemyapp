@@ -569,3 +569,89 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
+
+/**
+ * @transaction
+ * Show all transactions, revealing original data for fraud cases, masking others unless keys match.
+ */
+
+export function KeyDecryptorTransactions(input: RevealTransactionsInput): void {
+    const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
+
+    // Validate the input directly
+    if (!input || !input.inputKeys || input.inputKeys.length !== requiredKeys.length) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Invalid number of keys provided for Reveal the Transactions."
+        });
+        return;
+    }
+
+    // Check if all keys match
+    let keysMatch = true;
+    for (let i = 0; i < requiredKeys.length; i++) {
+        if (requiredKeys[i] !== input.inputKeys[i]) {
+            keysMatch = false;
+            break;
+        }
+    }
+
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+
+    // Retrieve all transactions
+    const keysList = seTransactionTable.get("keysList");
+    const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
+
+    const transactions: Transac[] = [];
+    for (let i = 0; i < transactionKeys.length; i++) {
+        const transactionData = seTransactionTable.get(transactionKeys[i]);
+        if (transactionData && transactionData.trim() !== "") {
+            const allTransactions = JSON.parse<Transac[]>(transactionData);
+
+            for (let j = 0; j < allTransactions.length; j++) {
+                const transac = allTransactions[j];
+
+                const transactionToAdd = new Transac();
+                transactionToAdd.walletPublicKey = transac.walletPublicKey;
+
+                if (transac.fraudStatus || keysMatch) {
+                    // Reveal all fields for fraud cases or when keys match
+                    transactionToAdd.synchronizationDate = transac.synchronizationDate;
+                    transactionToAdd.transactionName = transac.transactionName;
+                    transactionToAdd.FromID = transac.FromID;
+                    transactionToAdd.ToID = transac.ToID;
+                    transactionToAdd.nonce = transac.nonce;
+                    transactionToAdd.amount = transac.amount;
+                    transactionToAdd.generation = transac.generation;
+                    transactionToAdd.currencycode = transac.currencycode;
+                    transactionToAdd.txdate = transac.txdate;
+                } else {
+                    // Mask fields if not fraud and keys don't match
+                    transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
+                    transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
+                    transactionToAdd.FromID = "*".repeat(transac.FromID.length);
+                    transactionToAdd.ToID = "*".repeat(transac.ToID.length);
+                    transactionToAdd.nonce = "*".repeat(transac.nonce.length);
+                    transactionToAdd.amount = "*".repeat(transac.amount.length);
+                    transactionToAdd.generation = "*".repeat(transac.generation.length);
+                    transactionToAdd.currencycode = "*".repeat(transac.currencycode.length);
+                    transactionToAdd.txdate = "*".repeat(transac.txdate.length);
+                }
+
+                transactionToAdd.fraudStatus = transac.fraudStatus;
+                transactions.push(transactionToAdd);
+            }
+        }
+    }
+
+    // Respond with transactions
+    const output: TransactionListOutput = {
+        success: true,
+        transactionList: transactions,
+        has_next: false,
+        last_evaluated_key: "",
+        date: getDate().toString()
+    };
+
+    Notifier.sendJson<TransactionListOutput>(output);
+}
