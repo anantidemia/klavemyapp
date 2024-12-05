@@ -479,11 +479,6 @@ export function listAllTransactionsObfuscated(): void {
     Notifier.sendJson<TransactionListOutput>(output);
 }
 
-/**
- * @transaction
- * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
- */
-
 export function revealTransactions(input: RevealTransactionsInput): void {
     const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
 
@@ -520,18 +515,35 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             for (let j = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
 
-                // Reveal data if keys match; otherwise, show masked data
+                // Reveal only fraud transactions if keys match; otherwise, obfuscate others
                 const transactionToAdd = new Transac();
                 transactionToAdd.walletPublicKey = transac.walletPublicKey;
-                transactionToAdd.synchronizationDate = keysMatch ? transac.synchronizationDate : "*".repeat(transac.synchronizationDate.length);
-                transactionToAdd.transactionName = keysMatch ? transac.transactionName : "*".repeat(transac.transactionName.length);
-                transactionToAdd.FromID = keysMatch ? transac.FromID : "*".repeat(transac.FromID.length);
-                transactionToAdd.ToID = keysMatch ? transac.ToID : "*".repeat(transac.ToID.length);
-                transactionToAdd.nonce = keysMatch ? transac.nonce : "*".repeat(transac.nonce.length);
-                transactionToAdd.amount = keysMatch ? transac.amount : "*".repeat(transac.amount.length);
-                transactionToAdd.generation = keysMatch ? transac.generation : "*".repeat(transac.generation.length);
-                transactionToAdd.currencycode = keysMatch ? transac.currencycode : "*".repeat(transac.currencycode.length);
-                transactionToAdd.txdate = keysMatch ? transac.txdate : "*".repeat(transac.txdate.length);
+
+                if (keysMatch && transac.fraudStatus) {
+                    // Reveal fraud transactions
+                    transactionToAdd.synchronizationDate = transac.synchronizationDate;
+                    transactionToAdd.transactionName = transac.transactionName;
+                    transactionToAdd.FromID = transac.FromID;
+                    transactionToAdd.ToID = transac.ToID;
+                    transactionToAdd.nonce = transac.nonce;
+                    transactionToAdd.amount = transac.amount;
+                    transactionToAdd.generation = transac.generation;
+                    transactionToAdd.currencycode = transac.currencycode;
+                    transactionToAdd.txdate = transac.txdate;
+                } else {
+                    // Obfuscate other transactions
+                    transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
+                    transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
+                    transactionToAdd.FromID = "*".repeat(transac.FromID.length);
+                    transactionToAdd.ToID = "*".repeat(transac.ToID.length);
+                    transactionToAdd.nonce = "*".repeat(transac.nonce.length);
+                    transactionToAdd.amount = "*".repeat(transac.amount.length);
+                    transactionToAdd.generation = "*".repeat(transac.generation.length);
+                    transactionToAdd.currencycode = "*".repeat(transac.currencycode.length);
+                    transactionToAdd.txdate = "*".repeat(transac.txdate.length);
+                }
+
+                // Always include fraud status
                 transactionToAdd.fraudStatus = transac.fraudStatus;
 
                 transactions.push(transactionToAdd);
