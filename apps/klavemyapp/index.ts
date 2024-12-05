@@ -482,7 +482,7 @@ export function listAllTransactionsObfuscated(): void {
 export function revealTransactions(input: RevealTransactionsInput): void {
     const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
 
-    // Validate the input directly
+    // Validate the input keys
     if (!input || !input.inputKeys || input.inputKeys.length !== requiredKeys.length) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
@@ -492,8 +492,8 @@ export function revealTransactions(input: RevealTransactionsInput): void {
     }
 
     // Check if all keys match
-    let keysMatch = true;
-    for (let i = 0; i < requiredKeys.length; i++) {
+    let keysMatch: boolean = true;
+    for (let i: i32 = 0; i < requiredKeys.length; i++) {
         if (requiredKeys[i] !== input.inputKeys[i]) {
             keysMatch = false;
             break;
@@ -502,20 +502,27 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
-    // Retrieve all transactions
+    // Retrieve the list of transaction keys
     const keysList = seTransactionTable.get("keysList");
-    const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
+    let transactionKeys: string[] = [];
+    if (keysList) {
+        transactionKeys = JSON.parse<string[]>(keysList);
+    }
 
     const transactions: Transac[] = [];
-    for (let i = 0; i < transactionKeys.length; i++) {
-        const transactionData = seTransactionTable.get(transactionKeys[i]);
+
+    // Process each transaction key
+    for (let i: i32 = 0; i < transactionKeys.length; i++) {
+        const transactionKey = transactionKeys[i];
+        const transactionData = seTransactionTable.get(transactionKey);
+
         if (transactionData && transactionData.trim() !== "") {
             const allTransactions = JSON.parse<Transac[]>(transactionData);
 
-            for (let j = 0; j < allTransactions.length; j++) {
+            for (let j: i32 = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
 
-                // Reveal only fraud transactions if keys match; otherwise, obfuscate others
+                // Create a new transaction object for the response
                 const transactionToAdd = new Transac();
                 transactionToAdd.walletPublicKey = transac.walletPublicKey;
 
@@ -531,7 +538,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.currencycode = transac.currencycode;
                     transactionToAdd.txdate = transac.txdate;
                 } else {
-                    // Obfuscate other transactions
+                    // Obfuscate non-fraud transactions
                     transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
                     transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
                     transactionToAdd.FromID = "*".repeat(transac.FromID.length);
@@ -546,12 +553,13 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 // Always include fraud status
                 transactionToAdd.fraudStatus = transac.fraudStatus;
 
+                // Add the processed transaction to the response list
                 transactions.push(transactionToAdd);
             }
         }
     }
 
-    // Respond with transactions
+    // Prepare the response
     const output: TransactionListOutput = {
         success: true,
         transactionList: transactions,
@@ -560,5 +568,6 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         date: getDate().toString()
     };
 
+    // Send the response
     Notifier.sendJson<TransactionListOutput>(output);
 }
