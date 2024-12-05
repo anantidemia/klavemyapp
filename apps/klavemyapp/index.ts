@@ -176,9 +176,33 @@ export function storeTransaction(input: Transac): void {
         return;
     }
 
+    // Initialize or update wallet balance
+    let walletBalance: i32 = 0; // Ensure this is an i32
+    const balanceKey = `${input.walletPublicKey}_balance`;
+    const existingBalance = seTransactionTable.get(balanceKey);
+    if (existingBalance) {
+        walletBalance = <i32>parseFloat(existingBalance); // Explicit cast to i32
+    }
+
+    // Adjust wallet balance based on transaction name
+    if (input.transactionName === "Fund") {
+        walletBalance += <i32>parseFloat(input.amount); // Explicit cast to i32
+    } else if (input.transactionName === "Defund") {
+        walletBalance -= <i32>parseFloat(input.amount); // Explicit cast to i32
+    }
+
+    // Determine fraud status
+    const fraudStatus: bool = walletBalance < 0;
+
+    // Update wallet balance in the table
+    seTransactionTable.set(balanceKey, walletBalance.toString());
+
     // Add the transaction
     const existingTransactions = seTransactionTable.get(input.walletPublicKey) || "[]";
     const transactions = JSON.parse<Array<Transac>>(existingTransactions);
+
+    // Include the fraudStatus in the transaction
+    input.fraudStatus = fraudStatus;
     transactions.push(input);
     seTransactionTable.set(input.walletPublicKey, JSON.stringify(transactions));
 
@@ -193,9 +217,9 @@ export function storeTransaction(input: Transac): void {
 
     Notifier.sendJson<StoreOutput>({
         success: true
-});
-
+    });
 }
+
 
 /**
  * @query
