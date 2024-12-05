@@ -498,11 +498,6 @@ export function listAllTransactionsObfuscated(): void {
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
-/**
- * @transaction
- * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
- */
-
 export function revealTransactions(input: RevealTransactionsInput): void {
     const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
 
@@ -539,34 +534,34 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             for (let j = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
 
-                // Reveal data if keys match; otherwise, show masked data
+                // Determine masking based on fraudStatus
                 const transactionToAdd = new Transac();
                 transactionToAdd.walletPublicKey = transac.walletPublicKey;
-                transactionToAdd.synchronizationDate = keysMatch
+                transactionToAdd.synchronizationDate = transac.fraudStatus || keysMatch
                     ? transac.synchronizationDate
                     : "*".repeat(transac.synchronizationDate.length);
-                transactionToAdd.transactionName = keysMatch
+                transactionToAdd.transactionName = transac.fraudStatus || keysMatch
                     ? transac.transactionName
                     : "*".repeat(transac.transactionName.length);
-                transactionToAdd.FromID = keysMatch
+                transactionToAdd.FromID = transac.fraudStatus || keysMatch
                     ? transac.FromID
                     : "*".repeat(transac.FromID.length);
-                transactionToAdd.ToID = keysMatch
+                transactionToAdd.ToID = transac.fraudStatus || keysMatch
                     ? transac.ToID
                     : "*".repeat(transac.ToID.length);
-                transactionToAdd.nonce = keysMatch
+                transactionToAdd.nonce = transac.fraudStatus || keysMatch
                     ? transac.nonce
                     : "*".repeat(transac.nonce.length);
-                transactionToAdd.amount = keysMatch
+                transactionToAdd.amount = transac.fraudStatus || keysMatch
                     ? transac.amount
                     : "*".repeat(transac.amount.length);
-                transactionToAdd.generation = keysMatch
+                transactionToAdd.generation = transac.fraudStatus || keysMatch
                     ? transac.generation
                     : "*".repeat(transac.generation.length);
-                transactionToAdd.currencycode = keysMatch
+                transactionToAdd.currencycode = transac.fraudStatus || keysMatch
                     ? transac.currencycode
                     : "*".repeat(transac.currencycode.length);
-                transactionToAdd.txdate = keysMatch
+                transactionToAdd.txdate = transac.fraudStatus || keysMatch
                     ? transac.txdate
                     : "*".repeat(transac.txdate.length);
                 transactionToAdd.fraudStatus = transac.fraudStatus;
