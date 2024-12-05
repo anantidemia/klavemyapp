@@ -460,21 +460,10 @@ export function listAllTransactionsObfuscated(): void {
  * @transaction
  * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
  */
-export function revealTransactions(inputString: string): void {
+export function revealTransactions(input: RevealTransactionsInput): void {
     const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
 
-    // Parse the input string and validate
-    let input: RevealTransactionsInput | null = null;
-
-    if (inputString.trim() === "" || !inputString.includes("{") || !inputString.includes("}")) {
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "Invalid input format. Failed to parse JSON."
-        });
-        return;
-    }
-
-    input = JSON.parse<RevealTransactionsInput>(inputString);
+    // Validate the input directly
     if (!input || !input.inputKeys || input.inputKeys.length !== requiredKeys.length) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
