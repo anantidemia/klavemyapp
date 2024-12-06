@@ -573,6 +573,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.generation = transac.generation;
                     transactionToAdd.currencycode = transac.currencycode;
                     transactionToAdd.txdate = transac.txdate;
+                    transactionToAdd.walletBalance = walletBalance;
                 } else {
                     // Mask fields if keys don't match
                     transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
@@ -584,6 +585,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.amount = "*".repeat(transac.amount.length);
                     transactionToAdd.generation = "*".repeat(transac.generation.length);
                     transactionToAdd.currencycode = "*".repeat(transac.currencycode.length);
+                    transactionToAdd.walletBalance = -1;
                     transactionToAdd.txdate = "*".repeat(transac.txdate.length);
                 }
 

@@ -3,11 +3,11 @@
         {
             "walletPublicKey": "5b33aadf0529f2fc6917c54e8f92e509e0d2dc990c6d72f7c95f8e64849a535e91add5de8d6180c6471ecafff9b6c9165350bd9f3e05f94105ce31d295f83cd5",
             "synchronizationDate": "2024-11-25T18:27:56.830374",
-            "transactionName": "OfflinePayment",
+            "transactionName": "Defund",
             "FromID": "4515d2fae1df1951",
             "ToID": "85d87ead1e382a9d",
             "nonce": "00000011",
-            "amount": "00000000003c",
+            "amount": "0000000493E0",
             "generation": "00000000",
             "currencycode": "0840",
             "txdate": "20240802"
@@ -15,11 +15,11 @@
         {
             "walletPublicKey": "5b33aadf0529f2fc6917c54e8f92e509e0d2dc990c6d72f7c95f8e64849a535e91add5de8d6180c6471ecafff9b6c9165350bd9f3e05f94105ce31d295f83cd5",
             "synchronizationDate": "2024-11-25T18:27:56.804122",
-            "transactionName": "OfflinePayment",
+            "transactionName": "Fund",
             "FromID": "4515d2fae1df1951",
             "ToID": "85d87ead1e382a9d",
             "nonce": "00000010",
-            "amount": "00000000003c",
+            "amount": "0000000493E1",
             "generation": "00000000",
             "currencycode": "0840",
             "txdate": "20240802"
@@ -27,11 +27,11 @@
         {
             "walletPublicKey": "5b33aadf0529f2fc6917c54e8f92e509e0d2dc990c6d72f7c95f8e64849a535e91add5de8d6180c6471ecafff9b6c9165350bd9f3e05f94105ce31d295f83cd5",
             "synchronizationDate": "2024-11-25T18:27:56.777691",
-            "transactionName": "OfflinePayment",
+            "transactionName": "Defund",
             "FromID": "4515d2fae1df1951",
             "ToID": "85d87ead1e382a9d",
             "nonce": "0000000c",
-            "amount": "00000000003c",
+            "amount": "0000000593E0",
             "generation": "00000000",
             "currencycode": "0840",
             "txdate": "20240802"
@@ -39,11 +39,11 @@
         {
             "walletPublicKey": "5b33aadf0529f2fc6917c54e8f92e509e0d2dc990c6d72f7c95f8e64849a535e91add5de8d6180c6471ecafff9b6c9165350bd9f3e05f94105ce31d295f83cd5",
             "synchronizationDate": "2024-11-25T18:27:56.750240",
-            "transactionName": "OfflinePayment",
+            "transactionName": "Fund",
             "FromID": "4515d2fae1df1951",
             "ToID": "85d87ead1e382a9d",
             "nonce": "00000008",
-            "amount": "00000000003c",
+            "amount": "0000000893E0",
             "generation": "00000000",
             "currencycode": "0840",
             "txdate": "20240802"
@@ -51,11 +51,11 @@
         {
             "walletPublicKey": "5b33aadf0529f2fc6917c54e8f92e509e0d2dc990c6d72f7c95f8e64849a535e91add5de8d6180c6471ecafff9b6c9165350bd9f3e05f94105ce31d295f83cd5",
             "synchronizationDate": "2024-11-25T18:27:56.724515",
-            "transactionName": "OfflinePayment",
+            "transactionName": "Fund",
             "FromID": "4515d2fae1df1951",
             "ToID": "85d87ead1e382a9d",
             "nonce": "00000004",
-            "amount": "00000000003c",
+            "amount": "0000007493E0",
             "generation": "00000000",
             "currencycode": "0840",
             "txdate": "20240802"
@@ -63,11 +63,11 @@
         {
             "walletPublicKey": "5b33aadf0529f2fc6917c54e8f92e509e0d2dc990c6d72f7c95f8e64849a535e91add5de8d6180c6471ecafff9b6c9165350bd9f3e05f94105ce31d295f83cd5",
             "synchronizationDate": "2024-11-25T18:27:56.693805",
-            "transactionName": "OfflinePayment",
+            "transactionName": "Defund",
             "FromID": "4515d2fae1df1951",
             "ToID": "85d87ead1e382a9d",
             "nonce": "00000003",
-            "amount": "000000000023",
+            "amount": "0000000593E0",
             "generation": "00000000",
             "currencycode": "0840",
             "txdate": "20240802"
