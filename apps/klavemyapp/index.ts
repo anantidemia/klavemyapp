@@ -234,7 +234,7 @@ export function listAllTransactions(): void {
     const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
 
     // Initialize array and wallet balance
-    const allTransactions: Transac[] = [];
+    const allTransactions: Transac[] = []; // Initialize the transactions array
     for (let i = 0; i < transactionKeys.length; i++) {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
         if (transactionData && transactionData.trim() !== "") {
@@ -243,10 +243,12 @@ export function listAllTransactions(): void {
             let walletBalance: i32 = 0; // Initialize wallet balance for this key
             for (let j = 0; j < transactions.length; j++) {
                 const transac = transactions[j];
+
+                // Check transaction type and adjust wallet balance
                 if (transac.transactionName === "Fund") {
-                    walletBalance += <i32>Math.floor(parseFloat(transac.amount)); // Explicit cast
+                    walletBalance += <i32>Math.floor(parseFloat(transac.amount)); // Add the amount for Fund
                 } else if (transac.transactionName === "Defund") {
-                    walletBalance -= <i32>Math.floor(parseFloat(transac.amount)); // Explicit cast
+                    walletBalance -= <i32>Math.floor(parseFloat(transac.amount)); // Subtract the amount for Defund
                 }
 
                 // Attach wallet balance to transaction
