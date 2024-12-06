@@ -573,6 +573,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.generation = transac.generation;
                     transactionToAdd.currencycode = transac.currencycode;
                     transactionToAdd.txdate = transac.txdate;
+                    transactionToAdd.walletBalance = walletBalance;
                 } else {
                     // Mask fields if keys don't match and fraudStatus is false
                     transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
@@ -588,7 +589,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 }
 
                 // Attach calculated wallet balance and fraud status
-                transactionToAdd.walletBalance = walletBalance;
+                
                 transactionToAdd.fraudStatus = transac.fraudStatus;
 
                 transactions.push(transactionToAdd);
