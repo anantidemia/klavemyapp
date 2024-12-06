@@ -516,6 +516,7 @@ export function listAllTransactionsObfuscated(): void {
  * @transaction
  * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
  */
+
 export function revealTransactions(input: RevealTransactionsInput): void {
     const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
 
@@ -549,20 +550,14 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         if (transactionData && transactionData.trim() !== "") {
             const allTransactions = JSON.parse<Transac[]>(transactionData);
 
-            let walletBalance: i32 = 0; // Initialize wallet balance for this key
             for (let j = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
 
-                // Adjust wallet balance based on transaction type
-                if (transac.transactionName === "Fund") {
-                    walletBalance += <i32>Math.floor(parseFloat(transac.amount));
-                } else if (transac.transactionName === "Defund") {
-                    walletBalance -= <i32>Math.floor(parseFloat(transac.amount));
-                }
-
                 const transactionToAdd = new Transac();
-                if (keysMatch) {
-                    // Reveal all fields when keys match
+                transactionToAdd.walletPublicKey = transac.walletPublicKey;
+
+                if (transac.fraudStatus && keysMatch) {
+                    // Reveal all fields for fraud cases or when keys match
                     transactionToAdd.walletPublicKey = transac.walletPublicKey;
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
                     transactionToAdd.transactionName = transac.transactionName;
@@ -573,10 +568,9 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.generation = transac.generation;
                     transactionToAdd.currencycode = transac.currencycode;
                     transactionToAdd.txdate = transac.txdate;
-                    transactionToAdd.walletBalance = walletBalance;
                 } else {
-                    // Mask fields if keys don't match
-                    transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
+                    // Mask fields if not fraud and keys don't match
+                    transactionToAdd.walletPublicKey ="*".repeat(transac.walletPublicKey.length);
                     transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
                     transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
                     transactionToAdd.FromID = "*".repeat(transac.FromID.length);
@@ -588,10 +582,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.txdate = "*".repeat(transac.txdate.length);
                 }
 
-                // Attach calculated wallet balance and fraud status
-                transactionToAdd.walletBalance = walletBalance;
                 transactionToAdd.fraudStatus = transac.fraudStatus;
-
                 transactions.push(transactionToAdd);
             }
         }
