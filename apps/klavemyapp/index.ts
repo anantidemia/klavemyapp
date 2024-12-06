@@ -313,7 +313,27 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
  * Fetch all unique walletPublicKey values from the transaction list stored in the ledger,
  * and return them as key-value pairs with their fraudStatus.
  */
-export function listAllWalletPublicKeys(): void {
+export function listAllWalletPublicKeys(input: RevealTransactionsInput): void {
+    const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
+
+    // Validate the input keys
+    if (!input || !input.inputKeys || input.inputKeys.length !== requiredKeys.length) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Invalid number of keys provided for Reveal the WalletPublicKeys."
+        });
+        return;
+    }
+
+    // Check if all keys match
+    let keysMatch = true;
+    for (let i = 0; i < requiredKeys.length; i++) {
+        if (requiredKeys[i] !== input.inputKeys[i]) {
+            keysMatch = false;
+            break;
+        }
+    }
+
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
     const keysList = seTransactionTable.get("keysList");
 
@@ -328,7 +348,7 @@ export function listAllWalletPublicKeys(): void {
 
     // Parse the keysList to get the transaction keys
     const transactionKeys = JSON.parse<string[]>(keysList);
-    const uniqueWallets = new Array<WalletStatus>();
+    const uniqueWallets: WalletStatus[] = [];
 
     // Iterate over each key in the transaction table
     for (let i = 0; i < transactionKeys.length; i++) {
@@ -362,7 +382,11 @@ export function listAllWalletPublicKeys(): void {
             } else {
                 // Add new walletPublicKey with fraudStatus
                 const newWalletStatus = new WalletStatus();
-                newWalletStatus.walletPublicKey = transaction.walletPublicKey;
+                newWalletStatus.walletPublicKey = keysMatch
+                    ? transaction.walletPublicKey // Show real walletPublicKey if keys match
+                    : transaction.fraudStatus
+                    ? transaction.walletPublicKey // Show real walletPublicKey if fraudStatus is true
+                    : "*".repeat(transaction.walletPublicKey.length); // Mask walletPublicKey otherwise
                 newWalletStatus.fraudStatus = transaction.fraudStatus;
                 uniqueWallets.push(newWalletStatus);
             }
@@ -370,7 +394,7 @@ export function listAllWalletPublicKeys(): void {
     }
 
     // Prepare response in the required format
-    const keyValuePairs = new Array<string>();
+    const keyValuePairs: string[] = [];
     for (let i = 0; i < uniqueWallets.length; i++) {
         const entry = uniqueWallets[i];
         keyValuePairs.push(
@@ -379,12 +403,13 @@ export function listAllWalletPublicKeys(): void {
     }
 
     // Send the result back as a response
-    const output = new StoredKeys();
-    output.success = true;
-    output.walletPublicKeys = keyValuePairs;
+    const output: StoredKeys = {
+        success: true,
+        walletPublicKeys: keyValuePairs
+    };
+
     Notifier.sendJson<StoredKeys>(output);
 }
-
 
 
 /**
