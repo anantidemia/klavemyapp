@@ -561,7 +561,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 }
 
                 const transactionToAdd = new Transac();
-                if (keysMatch || transac.fraudStatus) {
+                if (keysMatch && transac.fraudStatus) {
                     // Reveal all fields when keys match or fraudStatus is true
                     transactionToAdd.walletPublicKey = transac.walletPublicKey;
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
