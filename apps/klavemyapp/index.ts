@@ -585,7 +585,6 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.amount = "*".repeat(transac.amount.length);
                     transactionToAdd.generation = "*".repeat(transac.generation.length);
                     transactionToAdd.currencycode = "*".repeat(transac.currencycode.length);
-                    transactionToAdd.walletBalance = -1;
                     transactionToAdd.txdate = "*".repeat(transac.txdate.length);
                 }
 
