@@ -233,14 +233,25 @@ export function listAllTransactions(): void {
     const keysList = seTransactionTable.get("keysList");
     const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
 
-    // Collect all transactions
+    // Initialize array and wallet balance
     const allTransactions: Transac[] = [];
-    for (let i: i32 = 0; i < transactionKeys.length; i++) {
+    for (let i = 0; i < transactionKeys.length; i++) {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
         if (transactionData && transactionData.trim() !== "") {
             const transactions = JSON.parse<Transac[]>(transactionData);
-            for (let j: i32 = 0; j < transactions.length; j++) {
-                allTransactions.push(transactions[j]);
+
+            let walletBalance: i32 = 0; // Initialize wallet balance for this key
+            for (let j = 0; j < transactions.length; j++) {
+                const transac = transactions[j];
+                if (transac.transactionName === "Fund") {
+                    walletBalance += <i32>Math.floor(parseFloat(transac.amount)); // Explicit cast
+                } else if (transac.transactionName === "Defund") {
+                    walletBalance -= <i32>Math.floor(parseFloat(transac.amount)); // Explicit cast
+                }
+
+                // Attach wallet balance to transaction
+                transac.walletBalance = walletBalance;
+                allTransactions.push(transac);
             }
         }
     }
@@ -249,13 +260,14 @@ export function listAllTransactions(): void {
     const output: TransactionListOutput = {
         success: true,
         transactionList: allTransactions,
-        has_next: false, // Indicate there are no paginated results
+        has_next: false,
         last_evaluated_key: "",
         date: getDate().toString()
     };
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
+
 
 /**
  * @query
