@@ -524,7 +524,7 @@ export function revealSecretKeys(): void {
 
 /**
  * @query
- * Obfuscate all transactions by masking sensitive fields with '*'.
+ * Obfuscate all transactions by masking sensitive fields with '*', while calculating dynamic balances.
  */
 export function listAllTransactionsObfuscated(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -533,42 +533,69 @@ export function listAllTransactionsObfuscated(): void {
     const keysList = seTransactionTable.get("keysList");
     const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
 
-    // Collect all transactions and mask their fields
+    // Initialize array to hold all obfuscated transactions
     const obfuscatedTransactions: Transac[] = [];
+
     for (let i = 0; i < transactionKeys.length; i++) {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
         if (transactionData && transactionData.trim() !== "") {
-            const transactions = JSON.parse<Transac[]>(transactionData);
-            for (let j = 0; j < transactions.length; j++) {
-                const transac = transactions[j];
-                const obfuscatedTransac = new Transac();
-                obfuscatedTransac.walletPublicKey = "*".repeat(transac.walletPublicKey.length); // Keep publicKey visible
-                obfuscatedTransac.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
-                obfuscatedTransac.transactionName = "*".repeat(transac.transactionName.length);
-                obfuscatedTransac.FromID = "*".repeat(transac.FromID.length);
-                obfuscatedTransac.ToID = "*".repeat(transac.ToID.length);
-                obfuscatedTransac.nonce = "*".repeat(transac.nonce.length);
-                obfuscatedTransac.amount = "*".repeat(transac.amount.length);
-                obfuscatedTransac.generation = "*".repeat(transac.generation.length);
-                obfuscatedTransac.currencycode = "*".repeat(transac.currencycode.length);
-                obfuscatedTransac.txdate = "*".repeat(transac.txdate.length);
-                obfuscatedTransac.fraudStatus = transac.fraudStatus;
-                obfuscatedTransactions.push(obfuscatedTransac);
+            const allTransactionsForKey = JSON.parse<Transac[]>(transactionData);
+
+            let estimateBalanceTo: i32 = 0; // Initialize balance for each key
+            let estimateBalanceFrom: i32 = 0;
+
+            for (let j = 0; j < allTransactionsForKey.length; j++) {
+                const transac = allTransactionsForKey[j];
+                const transactionToAdd = new Transac();
+
+                // Recalculate balances dynamically
+                if (transac.transactionName === "Fund") {
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                } else if (transac.transactionName === "Defund") {
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                } else if (transac.transactionName === "OfflinePayment") {
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                }
+
+                // Determine fraud status dynamically
+                const fraudStatus = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
+
+                // Mask transaction details
+                transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
+                transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
+                transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
+                transactionToAdd.FromID = "*".repeat(transac.FromID.length);
+                transactionToAdd.ToID = "*".repeat(transac.ToID.length);
+                transactionToAdd.nonce = "*".repeat(transac.nonce.length);
+                transactionToAdd.amount = "*".repeat(transac.amount.length);
+                transactionToAdd.generation = "*".repeat(transac.generation.length);
+                transactionToAdd.currencycode = "*".repeat(transac.currencycode.length);
+                transactionToAdd.txdate = "*".repeat(transac.txdate.length);
+
+                // Add calculated balances and fraud status
+                transactionToAdd.estimateBalanceTo = estimateBalanceTo;
+                transactionToAdd.estimateBalanceFrom = estimateBalanceFrom;
+                transactionToAdd.fraudStatus = fraudStatus;
+
+                obfuscatedTransactions.push(transactionToAdd);
             }
         }
     }
 
-    // Respond with masked transactions
+    // Respond with obfuscated transactions
     const output: TransactionListOutput = {
         success: true,
         transactionList: obfuscatedTransactions,
         has_next: false,
         last_evaluated_key: "",
-        date: getDate().toString()
+        date: getDate().toString(),
     };
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
+ 
+
 /**
  * @transaction
  * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
