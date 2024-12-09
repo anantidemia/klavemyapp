@@ -344,7 +344,7 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
 /**
  * @query
  * Fetch all unique walletPublicKey values from the transaction list stored in the ledger,
- * calculate dynamic balances, and return them as masked keys with their fraudStatus.
+ * calculate dynamic balances, and return them in the specified format.
  */
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -374,23 +374,20 @@ export function listAllWalletPublicKeys(): void {
         // Parse the transaction list for this key
         const transactions = JSON.parse<Transac[]>(transactionData);
 
-        // Calculate balances dynamically
         for (let j: i32 = 0; j < transactions.length; j++) {
             const transaction = transactions[j];
-
-            // Dynamic balance calculation for FromID
             const fromWalletPublicKey = transaction.FromID;
             const toWalletPublicKey = transaction.ToID;
             const amount = parseFloat(transaction.amount);
 
             // Process FromID
             if (!uniqueWallets.has(fromWalletPublicKey)) {
-                const newEntry = new WalletStatus();
-                newEntry.walletPublicKey = "*".repeat(fromWalletPublicKey.length); // Mask the key
-                newEntry.estimateBalanceTo = 0;
-                newEntry.estimateBalanceFrom = 0;
-                newEntry.fraudStatus = false;
-                uniqueWallets.set(fromWalletPublicKey, newEntry);
+                uniqueWallets.set(fromWalletPublicKey, {
+                    walletPublicKey: "*".repeat(fromWalletPublicKey.length),
+                    estimateBalanceTo: 0,
+                    estimateBalanceFrom: 0,
+                    fraudStatus: false,
+                });
             }
             const fromEntry = uniqueWallets.get(fromWalletPublicKey)!;
             if (transaction.transactionName === "Defund" || transaction.transactionName === "OfflinePayment") {
@@ -402,12 +399,12 @@ export function listAllWalletPublicKeys(): void {
 
             // Process ToID
             if (!uniqueWallets.has(toWalletPublicKey)) {
-                const newEntry = new WalletStatus();
-                newEntry.walletPublicKey = "*".repeat(toWalletPublicKey.length); // Mask the key
-                newEntry.estimateBalanceTo = 0;
-                newEntry.estimateBalanceFrom = 0;
-                newEntry.fraudStatus = false;
-                uniqueWallets.set(toWalletPublicKey, newEntry);
+                uniqueWallets.set(toWalletPublicKey, {
+                    walletPublicKey: "*".repeat(toWalletPublicKey.length),
+                    estimateBalanceTo: 0,
+                    estimateBalanceFrom: 0,
+                    fraudStatus: false,
+                });
             }
             const toEntry = uniqueWallets.get(toWalletPublicKey)!;
             if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
@@ -426,8 +423,9 @@ export function listAllWalletPublicKeys(): void {
     for (let i: i32 = 0; i < uniqueWalletKeys.length; i++) {
         const key = uniqueWalletKeys[i];
         const wallet = uniqueWallets.get(key)!;
+        const type = key === wallet.walletPublicKey ? "FromID" : "ToID";
         walletPublicKeys.push(
-            `WalletPublicKey${index}: ${wallet.walletPublicKey}, EstimateBalanceTo: ${wallet.estimateBalanceTo}, EstimateBalanceFrom: ${wallet.estimateBalanceFrom}, FraudStatus: ${wallet.fraudStatus}`
+            `WalletPublicKey${index}: ${type} : ${wallet.walletPublicKey}, EstimateBalanceTo: ${wallet.estimateBalanceTo}, EstimateBalanceFrom: ${wallet.estimateBalanceFrom}, FraudStatus: ${wallet.fraudStatus}`
         );
         index++;
     }
