@@ -233,49 +233,77 @@ export function storeTransaction(input: Transac): void {
 //  * @query
 //  * List all transactions stored in the secureElementTransactionTable.
 //  */
-// export function listAllTransactions(): void {
-//     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+/**
+ * @query
+ * List all transactions stored in the secureElementTransactionTable with dynamic balance calculations.
+ */
+export function listAllTransactions(): void {
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
-//     // Retrieve the list of keys
-//     const keysList = seTransactionTable.get("keysList");
-//     const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
+    // Retrieve the list of keys
+    const keysList = seTransactionTable.get("keysList");
+    const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
 
-//     // Initialize array and wallet balance
-//     const allTransactions: Transac[] = []; // Initialize the transactions array
-//     for (let i = 0; i < transactionKeys.length; i++) {
-//         const transactionData = seTransactionTable.get(transactionKeys[i]);
-//         if (transactionData && transactionData.trim() !== "") {
-//             const transactions = JSON.parse<Transac[]>(transactionData);
+    // Initialize array to hold all transactions
+    const allTransactions: Transac[] = [];
 
-//             let walletBalance: i32 = 0; // Initialize wallet balance for this key
-//             for (let j = 0; j < transactions.length; j++) {
-//                 const transac = transactions[j];
+    for (let i = 0; i < transactionKeys.length; i++) {
+        const transactionData = seTransactionTable.get(transactionKeys[i]);
+        if (transactionData && transactionData.trim() !== "") {
+            const allTransactionsForKey = JSON.parse<Transac[]>(transactionData);
 
-//                 // Check transaction type and adjust wallet balance
-//                 if (transac.transactionName === "Fund") {
-//                     walletBalance += <i32>Math.floor(parseFloat(transac.amount)); // Add the amount for Fund
-//                 } else if (transac.transactionName === "Defund") {
-//                     walletBalance -= <i32>Math.floor(parseFloat(transac.amount)); // Subtract the amount for Defund
-//                 }
+            let estimateBalanceTo: i32 = 0; // Initialize balance for each key
+            let estimateBalanceFrom: i32 = 0;
 
-//                 // Attach wallet balance to transaction
-//                 transac.walletBalance = walletBalance;
-//                 allTransactions.push(transac);
-//             }
-//         }
-//     }
+            for (let j = 0; j < allTransactionsForKey.length; j++) {
+                const transac = allTransactionsForKey[j];
+                const transactionToAdd = new Transac();
 
-//     // Respond with all transactions
-//     const output: TransactionListOutput = {
-//         success: true,
-//         transactionList: allTransactions,
-//         has_next: false,
-//         last_evaluated_key: "",
-//         date: getDate().toString()
-//     };
+                // Recalculate balances dynamically
+                if (transac.transactionName === "Fund") {
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                } else if (transac.transactionName === "Defund") {
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                } else if (transac.transactionName === "OfflinePayment") {
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                }
 
-//     Notifier.sendJson<TransactionListOutput>(output);
-// }
+                // Determine fraud status dynamically
+                const fraudStatus = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
+
+                // Add transaction details
+                transactionToAdd.walletPublicKey = transac.walletPublicKey;
+                transactionToAdd.synchronizationDate = transac.synchronizationDate;
+                transactionToAdd.transactionName = transac.transactionName;
+                transactionToAdd.FromID = transac.FromID;
+                transactionToAdd.ToID = transac.ToID;
+                transactionToAdd.nonce = transac.nonce;
+                transactionToAdd.amount = transac.amount;
+                transactionToAdd.generation = transac.generation;
+                transactionToAdd.currencycode = transac.currencycode;
+                transactionToAdd.txdate = transac.txdate;
+                transactionToAdd.estimateBalanceTo = estimateBalanceTo;
+                transactionToAdd.estimateBalanceFrom = estimateBalanceFrom;
+                transactionToAdd.fraudStatus = fraudStatus;
+
+                allTransactions.push(transactionToAdd);
+            }
+        }
+    }
+
+    // Respond with all transactions
+    const output: TransactionListOutput = {
+        success: true,
+        transactionList: allTransactions,
+        has_next: false,
+        last_evaluated_key: "",
+        date: getDate().toString(),
+    };
+
+    Notifier.sendJson<TransactionListOutput>(output);
+}
+
 
 
 /**
@@ -599,7 +627,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 // Determine fraud status dynamically
                 const fraudStatus = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
 
-                if (keysMatch || fraudStatus) {
+                if (keysMatch && fraudStatus) {
                     // Reveal all fields when keys match or fraudStatus is true
                     transactionToAdd.walletPublicKey = transac.walletPublicKey;
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
