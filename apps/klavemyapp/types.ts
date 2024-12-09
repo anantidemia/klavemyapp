@@ -65,7 +65,8 @@ export class Transac {
     generation!: string;
     currencycode!: string;
     txdate!: string;
-    walletBalance: number; // Define as non-optional with default value
+    estimateBalanceTo: number; // Define as non-optional with default value
+    estimateBalanceFrom: number;
     fraudStatus: boolean = false; // New property with default value
 }
 

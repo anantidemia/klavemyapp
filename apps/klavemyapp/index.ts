@@ -172,103 +172,110 @@ export function storeTransaction(input: Transac): void {
     ) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: "Invalid parameters: One or more required fields are missing"
-        });        
+            message: "Invalid parameters: One or more required fields are missing",
+        });
         return;
     }
 
-    // Initialize or update wallet balance
-    let walletBalance: i32 = 0; // Ensure this is an i32
-    const balanceKey = `${input.walletPublicKey}_balance`;
-    const existingBalance = seTransactionTable.get(balanceKey);
-    if (existingBalance) {
-        walletBalance = <i32>parseFloat(existingBalance); // Explicit cast to i32
-    }
+    // Initialize balances
+    let estimateBalanceTo: i32 = 0;
+    let estimateBalanceFrom: i32 = 0;
 
-    // Adjust wallet balance based on transaction name
+    // Retrieve transactions for the FromID and ToID
+    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+    const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
+    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+    const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
+
+    // Adjust balances based on transaction type
     if (input.transactionName === "Fund") {
-        walletBalance += <i32>parseFloat(input.amount); // Explicit cast to i32
+        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
     } else if (input.transactionName === "Defund") {
-        walletBalance -= <i32>parseFloat(input.amount); // Explicit cast to i32
+        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
+    } else if (input.transactionName === "OfflinePayment") {
+        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
+        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
     }
 
     // Determine fraud status
-    const fraudStatus: bool = walletBalance < 0;
+    const fraudStatus: bool = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
 
-    // Update wallet balance in the table
-    seTransactionTable.set(balanceKey, walletBalance.toString());
-
-    // Add the transaction
-    const existingTransactions = seTransactionTable.get(input.walletPublicKey) || "[]";
-    const transactions = JSON.parse<Array<Transac>>(existingTransactions);
-
-    // Include the fraudStatus in the transaction
+    // Include the balances and fraudStatus in the transaction
+    input.estimateBalanceTo = estimateBalanceTo;
+    input.estimateBalanceFrom = estimateBalanceFrom;
     input.fraudStatus = fraudStatus;
-    transactions.push(input);
-    seTransactionTable.set(input.walletPublicKey, JSON.stringify(transactions));
+
+    // Add the transaction to FromID and ToID
+    fromTransactions.push(input);
+    toTransactions.push(input);
+    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
+    seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
 
     // Maintain a list of keys in the table
     const keysList = seTransactionTable.get("keysList") || "[]";
     const keys = JSON.parse<Array<string>>(keysList);
 
-    if (!keys.includes(input.walletPublicKey)) {
-        keys.push(input.walletPublicKey);
-        seTransactionTable.set("keysList", JSON.stringify(keys));
+    if (!keys.includes(input.FromID)) {
+        keys.push(input.FromID);
     }
+    if (!keys.includes(input.ToID)) {
+        keys.push(input.ToID);
+    }
+    seTransactionTable.set("keysList", JSON.stringify(keys));
 
     Notifier.sendJson<StoreOutput>({
-        success: true
+        success: true,
     });
 }
 
 
-/**
- * @query
- * List all transactions stored in the secureElementTransactionTable.
- */
-export function listAllTransactions(): void {
-    const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+// /**
+//  * @query
+//  * List all transactions stored in the secureElementTransactionTable.
+//  */
+// export function listAllTransactions(): void {
+//     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
-    // Retrieve the list of keys
-    const keysList = seTransactionTable.get("keysList");
-    const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
+//     // Retrieve the list of keys
+//     const keysList = seTransactionTable.get("keysList");
+//     const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
 
-    // Initialize array and wallet balance
-    const allTransactions: Transac[] = []; // Initialize the transactions array
-    for (let i = 0; i < transactionKeys.length; i++) {
-        const transactionData = seTransactionTable.get(transactionKeys[i]);
-        if (transactionData && transactionData.trim() !== "") {
-            const transactions = JSON.parse<Transac[]>(transactionData);
+//     // Initialize array and wallet balance
+//     const allTransactions: Transac[] = []; // Initialize the transactions array
+//     for (let i = 0; i < transactionKeys.length; i++) {
+//         const transactionData = seTransactionTable.get(transactionKeys[i]);
+//         if (transactionData && transactionData.trim() !== "") {
+//             const transactions = JSON.parse<Transac[]>(transactionData);
 
-            let walletBalance: i32 = 0; // Initialize wallet balance for this key
-            for (let j = 0; j < transactions.length; j++) {
-                const transac = transactions[j];
+//             let walletBalance: i32 = 0; // Initialize wallet balance for this key
+//             for (let j = 0; j < transactions.length; j++) {
+//                 const transac = transactions[j];
 
-                // Check transaction type and adjust wallet balance
-                if (transac.transactionName === "Fund") {
-                    walletBalance += <i32>Math.floor(parseFloat(transac.amount)); // Add the amount for Fund
-                } else if (transac.transactionName === "Defund") {
-                    walletBalance -= <i32>Math.floor(parseFloat(transac.amount)); // Subtract the amount for Defund
-                }
+//                 // Check transaction type and adjust wallet balance
+//                 if (transac.transactionName === "Fund") {
+//                     walletBalance += <i32>Math.floor(parseFloat(transac.amount)); // Add the amount for Fund
+//                 } else if (transac.transactionName === "Defund") {
+//                     walletBalance -= <i32>Math.floor(parseFloat(transac.amount)); // Subtract the amount for Defund
+//                 }
 
-                // Attach wallet balance to transaction
-                transac.walletBalance = walletBalance;
-                allTransactions.push(transac);
-            }
-        }
-    }
+//                 // Attach wallet balance to transaction
+//                 transac.walletBalance = walletBalance;
+//                 allTransactions.push(transac);
+//             }
+//         }
+//     }
 
-    // Respond with all transactions
-    const output: TransactionListOutput = {
-        success: true,
-        transactionList: allTransactions,
-        has_next: false,
-        last_evaluated_key: "",
-        date: getDate().toString()
-    };
+//     // Respond with all transactions
+//     const output: TransactionListOutput = {
+//         success: true,
+//         transactionList: allTransactions,
+//         has_next: false,
+//         last_evaluated_key: "",
+//         date: getDate().toString()
+//     };
 
-    Notifier.sendJson<TransactionListOutput>(output);
-}
+//     Notifier.sendJson<TransactionListOutput>(output);
+// }
 
 
 /**
@@ -545,7 +552,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
     if (!input || !input.inputKeys || input.inputKeys.length !== requiredKeys.length) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: "Invalid number of keys provided for Reveal the Transactions."
+            message: "Invalid number of keys provided for Reveal the Transactions.",
         });
         return;
     }
@@ -571,18 +578,10 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         if (transactionData && transactionData.trim() !== "") {
             const allTransactions = JSON.parse<Transac[]>(transactionData);
 
-            let walletBalance: i32 = 0; // Initialize wallet balance for this key
             for (let j = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
-
-                // Adjust wallet balance based on transaction type
-                if (transac.transactionName === "Fund") {
-                    walletBalance += <i32>Math.floor(parseFloat(transac.amount));
-                } else if (transac.transactionName === "Defund") {
-                    walletBalance -= <i32>Math.floor(parseFloat(transac.amount));
-                }
-
                 const transactionToAdd = new Transac();
+
                 if (keysMatch && transac.fraudStatus) {
                     // Reveal all fields when keys match or fraudStatus is true
                     transactionToAdd.walletPublicKey = transac.walletPublicKey;
@@ -595,7 +594,8 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.generation = transac.generation;
                     transactionToAdd.currencycode = transac.currencycode;
                     transactionToAdd.txdate = transac.txdate;
-                    transactionToAdd.walletBalance = walletBalance;
+                    transactionToAdd.estimateBalanceTo = transac.estimateBalanceTo;
+                    transactionToAdd.estimateBalanceFrom = transac.estimateBalanceFrom;
                 } else {
                     // Mask fields if keys don't match and fraudStatus is false
                     transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
@@ -608,10 +608,10 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.generation = "*".repeat(transac.generation.length);
                     transactionToAdd.currencycode = "*".repeat(transac.currencycode.length);
                     transactionToAdd.txdate = "*".repeat(transac.txdate.length);
+                    transactionToAdd.estimateBalanceTo = 0;
+                    transactionToAdd.estimateBalanceFrom = 0;
                 }
 
-                // Attach calculated wallet balance and fraud status
-                
                 transactionToAdd.fraudStatus = transac.fraudStatus;
 
                 transactions.push(transactionToAdd);
@@ -625,7 +625,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         transactionList: transactions,
         has_next: false,
         last_evaluated_key: "",
-        date: getDate().toString()
+        date: getDate().toString(),
     };
 
     Notifier.sendJson<TransactionListOutput>(output);
