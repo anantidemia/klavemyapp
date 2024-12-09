@@ -344,7 +344,7 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
 /**
  * @query
  * Fetch all unique walletPublicKey values from the transaction list stored in the ledger,
- * and return them as masked keys with their fraudStatus and balance details.
+ * calculate dynamic balances, and return them as masked keys with their fraudStatus.
  */
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -374,28 +374,47 @@ export function listAllWalletPublicKeys(): void {
         // Parse the transaction list for this key
         const transactions = JSON.parse<Transac[]>(transactionData);
 
+        // Calculate balances dynamically
         for (let j: i32 = 0; j < transactions.length; j++) {
             const transaction = transactions[j];
 
-            const walletPublicKey = transaction.walletPublicKey;
-            const estimateBalanceTo = transaction.estimateBalanceTo;
-            const estimateBalanceFrom = transaction.estimateBalanceFrom;
-            const fraudStatus = transaction.fraudStatus;
+            // Dynamic balance calculation for FromID
+            const fromWalletPublicKey = transaction.FromID;
+            const toWalletPublicKey = transaction.ToID;
+            const amount = parseFloat(transaction.amount);
 
-            // If walletPublicKey is already processed, update its balances and fraud status
-            if (uniqueWallets.has(walletPublicKey)) {
-                const existingEntry = uniqueWallets.get(walletPublicKey)!;
-                existingEntry.estimateBalanceTo += estimateBalanceTo;
-                existingEntry.estimateBalanceFrom += estimateBalanceFrom;
-                existingEntry.fraudStatus = existingEntry.fraudStatus || fraudStatus;
-            } else {
-                // Add new walletPublicKey to the map
+            // Process FromID
+            if (!uniqueWallets.has(fromWalletPublicKey)) {
                 const newEntry = new WalletStatus();
-                newEntry.walletPublicKey = "*".repeat(walletPublicKey.length); // Mask the key
-                newEntry.estimateBalanceTo = estimateBalanceTo;
-                newEntry.estimateBalanceFrom = estimateBalanceFrom;
-                newEntry.fraudStatus = fraudStatus;
-                uniqueWallets.set(walletPublicKey, newEntry);
+                newEntry.walletPublicKey = "*".repeat(fromWalletPublicKey.length); // Mask the key
+                newEntry.estimateBalanceTo = 0;
+                newEntry.estimateBalanceFrom = 0;
+                newEntry.fraudStatus = false;
+                uniqueWallets.set(fromWalletPublicKey, newEntry);
+            }
+            const fromEntry = uniqueWallets.get(fromWalletPublicKey)!;
+            if (transaction.transactionName === "Defund" || transaction.transactionName === "OfflinePayment") {
+                fromEntry.estimateBalanceFrom -= amount;
+                if (fromEntry.estimateBalanceFrom < 0) {
+                    fromEntry.fraudStatus = true;
+                }
+            }
+
+            // Process ToID
+            if (!uniqueWallets.has(toWalletPublicKey)) {
+                const newEntry = new WalletStatus();
+                newEntry.walletPublicKey = "*".repeat(toWalletPublicKey.length); // Mask the key
+                newEntry.estimateBalanceTo = 0;
+                newEntry.estimateBalanceFrom = 0;
+                newEntry.fraudStatus = false;
+                uniqueWallets.set(toWalletPublicKey, newEntry);
+            }
+            const toEntry = uniqueWallets.get(toWalletPublicKey)!;
+            if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
+                toEntry.estimateBalanceTo += amount;
+                if (toEntry.estimateBalanceTo < 0) {
+                    toEntry.fraudStatus = true;
+                }
             }
         }
     }
