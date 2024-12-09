@@ -116,3 +116,19 @@ export class WalletStatus {
     walletPublicKey!: string;
     fraudStatus: boolean = false;
 }
+@serializable
+export class UniqueEntry {
+    id: string;
+    isFromID: boolean;
+    estimateBalanceTo: number;
+    estimateBalanceFrom: number;
+    fraudStatus: boolean;
+
+    constructor(id: string, isFromID: boolean) {
+        this.id = id;
+        this.isFromID = isFromID;
+        this.estimateBalanceTo = 0;
+        this.estimateBalanceFrom = 0;
+        this.fraudStatus = false;
+    }
+}

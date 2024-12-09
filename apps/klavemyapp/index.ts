@@ -16,7 +16,7 @@ import {
     Key, // Import the Key class
     MaskedKeysOutput, // Import the MaskedKeysOutput class
     RevealTransactionsInput,
-    WalletStatus
+    UniqueEntry
 } from './types';
 import { getDate } from './utils';
 
@@ -343,96 +343,81 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
 }
 
 
-/**
- * @query
- * Fetch all unique walletPublicKey values from the transaction list stored in the ledger,
- * and return them as key-value pairs with their fraudStatus.
- */
-export function listAllWalletPublicKeys(input: RevealTransactionsInput): void {
-    const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
-
-    // Validate the input keys
-    if (!input || !input.inputKeys || input.inputKeys.length !== requiredKeys.length) {
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "Invalid number of keys provided for Reveal the WalletPublicKeys."
-        });
-        return;
-    }
-
-    // Check if all keys match
-    let keysMatch = true;
-    for (let i = 0; i < requiredKeys.length; i++) {
-        if (requiredKeys[i] !== input.inputKeys[i]) {
-            keysMatch = false;
-            break;
-        }
-    }
-
+export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+
+    // Retrieve the list of keys
     const keysList = seTransactionTable.get("keysList");
+    const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
 
-    // Check if keysList exists and is not empty
-    if (!keysList || keysList.trim() === "[]") {
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "No transactions found in the ledger.",
-        });
-        return;
-    }
+    // Initialize an array to store unique entries
+    const uniqueEntries: Array<UniqueEntry> = [];
 
-    // Parse the keysList to get the transaction keys
-    const transactionKeys = JSON.parse<string[]>(keysList);
-    const uniqueWallets = new Array<WalletStatus>();
-
-    // Iterate over each key in the transaction table
     for (let i = 0; i < transactionKeys.length; i++) {
-        const transactionKey = transactionKeys[i];
-        const transactionData = seTransactionTable.get(transactionKey);
+        const transactionData = seTransactionTable.get(transactionKeys[i]);
+        if (transactionData && transactionData.trim() !== "") {
+            const transactions = JSON.parse<Transac[]>(transactionData);
 
-        // Skip if no data for this key
-        if (!transactionData || transactionData.trim() === "") {
-            continue;
-        }
+            for (let j = 0; j < transactions.length; j++) {
+                const transac = transactions[j];
 
-        // Parse the transaction list for this key
-        const transactions = JSON.parse<Transac[]>(transactionData);
+                // Calculate balances dynamically
+                let estimateBalanceTo: i32 = 0;
+                let estimateBalanceFrom: i32 = 0;
 
-        // Extract walletPublicKey and fraudStatus from each transaction
-        for (let j = 0; j < transactions.length; j++) {
-            const transaction = transactions[j];
+                if (transac.transactionName === "Fund") {
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                } else if (transac.transactionName === "Defund") {
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                } else if (transac.transactionName === "OfflinePayment") {
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                }
 
-            // Check if walletPublicKey already exists in uniqueWallets
-            let existingEntry: WalletStatus | null = null;
-            for (let k = 0; k < uniqueWallets.length; k++) {
-                if (uniqueWallets[k].walletPublicKey === transaction.walletPublicKey) {
-                    existingEntry = uniqueWallets[k];
-                    break;
+                const fraudStatus = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
+
+                // Update or add FromID
+                let found = false;
+                for (let k = 0; k < uniqueEntries.length; k++) {
+                    if (uniqueEntries[k].id === transac.FromID) {
+                        uniqueEntries[k].estimateBalanceFrom += estimateBalanceFrom;
+                        uniqueEntries[k].fraudStatus = uniqueEntries[k].fraudStatus || fraudStatus;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    uniqueEntries.push(new UniqueEntry(transac.FromID, true));
+                    uniqueEntries[uniqueEntries.length - 1].estimateBalanceFrom = estimateBalanceFrom;
+                    uniqueEntries[uniqueEntries.length - 1].fraudStatus = fraudStatus;
+                }
+
+                // Update or add ToID
+                found = false;
+                for (let k = 0; k < uniqueEntries.length; k++) {
+                    if (uniqueEntries[k].id === transac.ToID) {
+                        uniqueEntries[k].estimateBalanceTo += estimateBalanceTo;
+                        uniqueEntries[k].fraudStatus = uniqueEntries[k].fraudStatus || fraudStatus;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    uniqueEntries.push(new UniqueEntry(transac.ToID, false));
+                    uniqueEntries[uniqueEntries.length - 1].estimateBalanceTo = estimateBalanceTo;
+                    uniqueEntries[uniqueEntries.length - 1].fraudStatus = fraudStatus;
                 }
             }
-
-            if (existingEntry) {
-                // Update fraudStatus if any transaction has fraud detected
-                existingEntry.fraudStatus = existingEntry.fraudStatus || transaction.fraudStatus;
-            } else {
-                // Add new walletPublicKey with fraudStatus
-                const newWalletStatus = new WalletStatus();
-                newWalletStatus.walletPublicKey =
-                    keysMatch && transaction.fraudStatus
-                        ? transaction.walletPublicKey // Show real walletPublicKey
-                        : "*".repeat(transaction.walletPublicKey.length); // Mask walletPublicKey otherwise
-                newWalletStatus.fraudStatus = transaction.fraudStatus;
-                uniqueWallets.push(newWalletStatus);
-            }
         }
     }
 
-    // Prepare response in the required format
+    // Prepare the response format
     const keyValuePairs = new Array<string>();
-    for (let i = 0; i < uniqueWallets.length; i++) {
-        const entry = uniqueWallets[i];
+    for (let i = 0; i < uniqueEntries.length; i++) {
+        const entry = uniqueEntries[i];
+        const maskedID = "*".repeat(entry.id.length); // Mask the ID
         keyValuePairs.push(
-            `WalletPublicKey${i + 1}: ${entry.walletPublicKey}, FraudStatus: ${entry.fraudStatus}`
+            `WalletPublicKey${i + 1}: ${entry.isFromID ? "FromID" : "ToID"} : ${maskedID}, EstimateBalanceTo: ${entry.estimateBalanceTo}, EstimateBalanceFrom: ${entry.estimateBalanceFrom}, FraudStatus: ${entry.fraudStatus}`
         );
     }
 
@@ -442,6 +427,7 @@ export function listAllWalletPublicKeys(input: RevealTransactionsInput): void {
     output.walletPublicKeys = keyValuePairs;
     Notifier.sendJson<StoredKeys>(output);
 }
+
 
 
 /**
