@@ -344,7 +344,7 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
 /**
  * @query
  * Fetch all unique walletPublicKey values from the transaction list stored in the ledger,
- * and strictly enforce the order: store FromID first, then ToID, and update balances dynamically.
+ * and strictly prioritize FromID over ToID for storage and balance updates.
  */
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -380,17 +380,27 @@ export function listAllWalletPublicKeys(): void {
             const toWalletPublicKey = transaction.ToID;
             const amount = parseFloat(transaction.amount);
 
-            // Handle FromID logic
+            // ** Process FromID **
             if (!uniqueWallets.has(fromWalletPublicKey)) {
-                // FromID is not present, add it and skip processing ToID
+                // FromID is not present, add it
                 uniqueWallets.set(fromWalletPublicKey, {
                     walletPublicKey: "*".repeat(fromWalletPublicKey.length),
                     estimateBalanceTo: 0,
                     estimateBalanceFrom: 0,
                     fraudStatus: false,
                 });
-            } else if (uniqueWallets.has(fromWalletPublicKey)) {
-                // If FromID exists, handle ToID
+            }
+            const fromEntry = uniqueWallets.get(fromWalletPublicKey)!;
+            if (transaction.transactionName === "Defund" || transaction.transactionName === "OfflinePayment") {
+                fromEntry.estimateBalanceFrom -= amount;
+                if (fromEntry.estimateBalanceFrom < 0) {
+                    fromEntry.fraudStatus = true;
+                }
+            }
+
+            // ** Process ToID **
+            if (uniqueWallets.has(fromWalletPublicKey)) {
+                // Add ToID only if FromID exists
                 if (!uniqueWallets.has(toWalletPublicKey)) {
                     uniqueWallets.set(toWalletPublicKey, {
                         walletPublicKey: "*".repeat(toWalletPublicKey.length),
@@ -399,21 +409,6 @@ export function listAllWalletPublicKeys(): void {
                         fraudStatus: false,
                     });
                 }
-            }
-
-            // Update balances for FromID
-            if (uniqueWallets.has(fromWalletPublicKey)) {
-                const fromEntry = uniqueWallets.get(fromWalletPublicKey)!;
-                if (transaction.transactionName === "Defund" || transaction.transactionName === "OfflinePayment") {
-                    fromEntry.estimateBalanceFrom -= amount;
-                    if (fromEntry.estimateBalanceFrom < 0) {
-                        fromEntry.fraudStatus = true;
-                    }
-                }
-            }
-
-            // Update balances for ToID
-            if (uniqueWallets.has(toWalletPublicKey)) {
                 const toEntry = uniqueWallets.get(toWalletPublicKey)!;
                 if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
                     toEntry.estimateBalanceTo += amount;
@@ -432,7 +427,7 @@ export function listAllWalletPublicKeys(): void {
     for (let i: i32 = 0; i < uniqueWalletKeys.length; i++) {
         const key = uniqueWalletKeys[i];
         const wallet = uniqueWallets.get(key)!;
-        const type = key === wallet.walletPublicKey ? "FromID" : "ToID";
+        const type = wallet.estimateBalanceFrom !== 0 ? "FromID" : "ToID";
         walletPublicKeys.push(
             `WalletPublicKey${index}: ${type} : ${wallet.walletPublicKey}, EstimateBalanceTo: ${wallet.estimateBalanceTo}, EstimateBalanceFrom: ${wallet.estimateBalanceFrom}, FraudStatus: ${wallet.fraudStatus}`
         );
