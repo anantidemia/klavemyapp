@@ -1,4 +1,3 @@
-
 @serializable
 export class ErrorMessage {
     success: boolean = false;
@@ -65,11 +64,10 @@ export class Transac {
     generation!: string;
     currencycode!: string;
     txdate!: string;
-    estimateBalanceTo: number; // Define as non-optional with default value
-    estimateBalanceFrom: number;
-    fraudStatus: boolean = false; // New property with default value
+    estimateBalanceTo: number = 0; // Default value to ensure proper initialization
+    estimateBalanceFrom: number = 0; // Default value for initialization
+    fraudStatus: boolean = false; // Indicates whether the transaction is fraudulent
 }
-
 
 @serializable
 export class SecureElementTransaction {
@@ -89,46 +87,35 @@ export class TransactionListOutput {
 @serializable
 export class StoredKeys {
     success: boolean = true;
-    walletPublicKeys!: string[]; // Array of key-value pair strings
+    walletPublicKeys!: string[]; // Array to hold key-value pair strings
 }
+
 /**
- * A class representing the response structure for masked keys.
+ * Represents the structure of a cryptographic key.
  */
 @serializable
 export class Key {
-    privateKey: string = ""; // Default initialization
-    originalPublicKey: string = "";
-    compressedPublicKey: string = "";
+    privateKey: string = ""; // Default empty string
+    originalPublicKey: string = ""; // Original public key representation
+    compressedPublicKey: string = ""; // Compressed public key representation
 }
 
 @serializable
 export class MaskedKeysOutput {
     success: boolean = true;
-    message: string = "";
-    keys: Key[] = [];
+    message: string = ""; // Message for any additional info
+    keys: Key[] = []; // List of keys
 }
+
 @serializable
 export class RevealTransactionsInput {
-    inputKeys: string[] = [];
+    inputKeys: string[] = []; // Array of input keys for revealing transactions
 }
+
 @serializable
 export class WalletStatus {
     walletPublicKey!: string;
-    fraudStatus: boolean = false;
-}
-@serializable
-export class UniqueEntry {
-    id: string;
-    isFromID: boolean;
-    estimateBalanceTo: number;
-    estimateBalanceFrom: number;
-    fraudStatus: boolean;
-
-    constructor(id: string, isFromID: boolean) {
-        this.id = id;
-        this.isFromID = isFromID;
-        this.estimateBalanceTo = 0;
-        this.estimateBalanceFrom = 0;
-        this.fraudStatus = false;
-    }
+    estimateBalanceTo: number = 0; // Default value for balance to
+    estimateBalanceFrom: number = 0; // Default value for balance from
+    fraudStatus: boolean = false; // Indicates if fraud is detected for this wallet
 }
