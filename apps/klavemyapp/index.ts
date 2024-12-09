@@ -344,7 +344,7 @@ export function listTransactionsByWalletPublicKeys(input: SecureElementKey): voi
 /**
  * @query
  * Fetch all unique walletPublicKey values from the transaction list stored in the ledger,
- * calculate dynamic balances, and return them in the specified format.
+ * process based on the presence of FromID and ToID, and calculate balances dynamically.
  */
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -380,8 +380,9 @@ export function listAllWalletPublicKeys(): void {
             const toWalletPublicKey = transaction.ToID;
             const amount = parseFloat(transaction.amount);
 
-            // Process FromID
+            // Handle FromID logic
             if (!uniqueWallets.has(fromWalletPublicKey)) {
+                // FromID is not present, add it to the map
                 uniqueWallets.set(fromWalletPublicKey, {
                     walletPublicKey: "*".repeat(fromWalletPublicKey.length),
                     estimateBalanceTo: 0,
@@ -397,20 +398,23 @@ export function listAllWalletPublicKeys(): void {
                 }
             }
 
-            // Process ToID
-            if (!uniqueWallets.has(toWalletPublicKey)) {
+            // Handle ToID logic
+            if (uniqueWallets.has(fromWalletPublicKey) && !uniqueWallets.has(toWalletPublicKey)) {
+                // FromID is already present, add ToID
                 uniqueWallets.set(toWalletPublicKey, {
                     walletPublicKey: "*".repeat(toWalletPublicKey.length),
                     estimateBalanceTo: 0,
                     estimateBalanceFrom: 0,
                     fraudStatus: false,
                 });
-            }
-            const toEntry = uniqueWallets.get(toWalletPublicKey)!;
-            if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
-                toEntry.estimateBalanceTo += amount;
-                if (toEntry.estimateBalanceTo < 0) {
-                    toEntry.fraudStatus = true;
+            } else if (uniqueWallets.has(toWalletPublicKey)) {
+                // If ToID is already present, update its balance
+                const toEntry = uniqueWallets.get(toWalletPublicKey)!;
+                if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
+                    toEntry.estimateBalanceTo += amount;
+                    if (toEntry.estimateBalanceTo < 0) {
+                        toEntry.fraudStatus = true;
+                    }
                 }
             }
         }
