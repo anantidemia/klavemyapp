@@ -573,16 +573,33 @@ export function revealTransactions(input: RevealTransactionsInput): void {
     const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
 
     const transactions: Transac[] = [];
+
     for (let i = 0; i < transactionKeys.length; i++) {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
         if (transactionData && transactionData.trim() !== "") {
             const allTransactions = JSON.parse<Transac[]>(transactionData);
 
+            let estimateBalanceTo: i32 = 0; // Initialize balance for each iteration
+            let estimateBalanceFrom: i32 = 0;
+
             for (let j = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
                 const transactionToAdd = new Transac();
 
-                if (keysMatch && transac.fraudStatus) {
+                // Recalculate balances dynamically
+                if (transac.transactionName === "Fund") {
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                } else if (transac.transactionName === "Defund") {
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                } else if (transac.transactionName === "OfflinePayment") {
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                }
+
+                // Determine fraud status dynamically
+                const fraudStatus = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
+
+                if (keysMatch || fraudStatus) {
                     // Reveal all fields when keys match or fraudStatus is true
                     transactionToAdd.walletPublicKey = transac.walletPublicKey;
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
@@ -594,8 +611,9 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.generation = transac.generation;
                     transactionToAdd.currencycode = transac.currencycode;
                     transactionToAdd.txdate = transac.txdate;
-                    transactionToAdd.estimateBalanceTo = transac.estimateBalanceTo;
-                    transactionToAdd.estimateBalanceFrom = transac.estimateBalanceFrom;
+                    transactionToAdd.estimateBalanceTo = estimateBalanceTo;
+                    transactionToAdd.estimateBalanceFrom = estimateBalanceFrom;
+                    transactionToAdd.fraudStatus = fraudStatus;
                 } else {
                     // Mask fields if keys don't match and fraudStatus is false
                     transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
@@ -610,9 +628,8 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.txdate = "*".repeat(transac.txdate.length);
                     transactionToAdd.estimateBalanceTo = 0;
                     transactionToAdd.estimateBalanceFrom = 0;
+                    transactionToAdd.fraudStatus = false;
                 }
-
-                transactionToAdd.fraudStatus = transac.fraudStatus;
 
                 transactions.push(transactionToAdd);
             }
