@@ -759,7 +759,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         }
     }
 
-    // Combine both responses
+    // Combine both responses -do 
     const output: TransactionListOutput = {
         success: true,
         transactionList: transactions,
