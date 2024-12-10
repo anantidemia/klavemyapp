@@ -17,7 +17,6 @@ import { getDate } from './utils';
 const secureElementTransactionTable = "transaction_table";
 
 const balanceTableName = "balance_table"; // Name of the new table for storing balances
-
 /**
  * @transaction
  * @param {Transac} input - A parsed input argument
@@ -76,12 +75,14 @@ export function storeTransaction(input: Transac): void {
     const balanceKeysListHex = balanceTable.get("keysList") || "[]";
     const balanceKeysList = JSON.parse<string[]>(balanceKeysListHex);
 
+    // Avoid duplicates: Only add if not already present
     if (!balanceKeysList.includes(input.FromID)) {
         balanceKeysList.push(input.FromID);
     }
-    if (!balanceKeysList.includes(input.ToID)) {
+    if (input.FromID !== input.ToID && !balanceKeysList.includes(input.ToID)) {
         balanceKeysList.push(input.ToID);
     }
+
     balanceTable.set("keysList", JSON.stringify(balanceKeysList));
 
     // Update secureElementTransactionTable
@@ -124,6 +125,7 @@ export function storeTransaction(input: Transac): void {
         success: true,
     });
 }
+
 
 /**
  * @query
