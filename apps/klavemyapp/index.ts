@@ -703,29 +703,29 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             }
         }
     }
-    const walletPublicKeys: string[] = [];
-    const keys = walletStatuses.keys(); // Get all keys from the Map
-    let index = 1;
-    
-    for (let i = 0; i < keys.length; i++) {
-        const key = keys[i];
-        const status = walletStatuses.get(key); // Get the WalletStatus for the key
-    
-        if (status) {
-            const type = status.estimateBalanceFrom < 0 ? "FromID" : "ToID";
-            const balance =
-                type === "FromID"
-                    ? `EstimateBalanceFrom: ${Math.round(status.estimateBalanceFrom * 10) / 10}`
-                    : `EstimateBalanceTo: ${Math.round(status.estimateBalanceTo * 10) / 10}`;
-            const fraudStatus = status.fraudStatus ? "true" : "false";
-    
-            walletPublicKeys.push(
-                `WalletPublicKey${index}: ${type} : ${key}, ${balance}, FraudStatus: ${fraudStatus}`
-            );
-            index++;
-        }
+const walletPublicKeys: string[] = [];
+const keys = walletStatuses.keys(); // Get all keys from the Map
+let index = 1;
+
+for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const status = walletStatuses.get(key); // Get the WalletStatus for the key
+
+    if (status) {
+        const type = status.estimateBalanceFrom < 0 ? "FromID" : "ToID";
+        const balance =
+            type === "FromID"
+                ? `EstimateBalanceFrom: ${Math.round(status.estimateBalanceFrom * 10) / 10}`
+                : `EstimateBalanceTo: ${Math.round(status.estimateBalanceTo * 10) / 10}`;
+        const fraudStatus = status.fraudStatus ? "true" : "false";
+
+        walletPublicKeys.push(
+            `WalletPublicKey${index}: ${type} : ${key}, ${balance}, FraudStatus: ${fraudStatus}`
+        );
+        index++;
     }
-    
+}
+
 
     // Respond with transactions
     const output: TransactionListOutput = {
