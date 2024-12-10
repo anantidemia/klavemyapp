@@ -3,54 +3,11 @@ export class ErrorMessage {
     success: boolean = false;
     message!: string;
 }
-
-@serializable
-export class FetchInput {
-    key!: string;
-}
-
-@serializable
-export class FetchOutput {
-    success: boolean = true;
-    value!: string;
-}
-
-@serializable
-export class StoreInput {
-    key!: string;
-    value!: string;
-}
-
 @serializable
 export class StoreOutput {
     success: boolean = true;
 }
 
-@serializable
-export class SecureElementKey {
-    walletPublicKey!: string;
-}
-
-@serializable
-export class SecureElement {
-    walletPublicKey!: string;
-    field1!: string;
-    field2!: string;
-    creationDate!: i64;
-    status!: string;
-}
-
-@serializable
-export class SecureElementOutput {
-    success: boolean = true;
-    secureElement!: string;
-}
-
-@serializable
-export class SecureElementOutputList {
-    success: boolean = true;
-    seList!: SecureElement[];
-}
 
 @serializable
 export class Transac {
