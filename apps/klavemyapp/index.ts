@@ -125,6 +125,10 @@ export function storeTransaction(input: Transac): void {
     });
 }
 
+/**
+ * @query
+ * Fetch all wallet keys, calculate fraud status based on balance, and provide masked keys and balances.
+ */
 
 export function listAllWalletPublicKeys(): void {
     const balanceTable = Ledger.getTable(balanceTableName);
