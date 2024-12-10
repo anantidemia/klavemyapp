@@ -112,7 +112,7 @@
             "walletPublicKey": "8a1ac4ed8fd80f57325b09b4b52c83caada6da24da5df58647f44c928b4ae8f2cf2955a3ba5e81b2e193f26ae21b6341ba2d45e8ef22407dad5e6e5afdc55b3e",
             "synchronizationDate": "2024-11-25T18:17:56.461181",
             "transactionName": "Fund",
-            "amount": "000000000064",
+            "amount": "000000444464",
             "FromPubKey": "9b2b61737fdaf1c24932106e811b0874c32818fe63f03613af51d00f204d81335f8adde40873f381d4a4e55c3b04dddd5d1e024c655998afe9a452d662f36720",
             "FromID": "40e70c259957984c",
             "ToPubKey": "8a1ac4ed8fd80f57325b09b4b52c83caada6da24da5df58647f44c928b4ae8f2cf2955a3ba5e81b2e193f26ae21b6341ba2d45e8ef22407dad5e6e5afdc55b3e",

@@ -629,20 +629,21 @@ export function revealTransactions(input: RevealTransactionsInput): void {
     const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
 
     const transactions: Transac[] = [];
+    const uniqueWallets = new Map<string, WalletStatus>();
 
     for (let i = 0; i < transactionKeys.length; i++) {
         const transactionData = seTransactionTable.get(transactionKeys[i]);
         if (transactionData && transactionData.trim() !== "") {
             const allTransactions = JSON.parse<Transac[]>(transactionData);
 
-            let estimateBalanceTo: i32 = 0; // Initialize balance for each iteration
-            let estimateBalanceFrom: i32 = 0;
-
             for (let j = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
                 const transactionToAdd = new Transac();
 
                 // Recalculate balances dynamically
+                let estimateBalanceTo: i32 = 0;
+                let estimateBalanceFrom: i32 = 0;
+
                 if (transac.transactionName === "Fund") {
                     estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
                 } else if (transac.transactionName === "Defund") {
@@ -675,8 +676,8 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
                     transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
                     transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
-                    transactionToAdd.FromID = "*".repeat(transac.FromID.length);
-                    transactionToAdd.ToID = "*".repeat(transac.ToID.length);
+                    transactionToAdd.FromID = transac.FromID; // Keep FromID unmasked
+                    transactionToAdd.ToID = transac.ToID; // Keep ToID unmasked
                     transactionToAdd.nonce = "*".repeat(transac.nonce.length);
                     transactionToAdd.amount = "*".repeat(transac.amount.length);
                     transactionToAdd.generation = "*".repeat(transac.generation.length);
@@ -688,70 +689,57 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 }
 
                 transactions.push(transactionToAdd);
-            }
-        }
-    }
 
-    // ** Logic for listAllWalletPublicKeys **
-    const uniqueWallets = new Map<string, WalletStatus>();
+                // Process unique wallet balances (FromID and ToID)
+                const fromWalletPublicKey = transac.FromID;
+                const toWalletPublicKey = transac.ToID;
+                const amount = parseFloat(transac.amount);
 
-    for (let i: i32 = 0; i < transactionKeys.length; i++) {
-        const transactionKey = transactionKeys[i];
-        const transactionData = seTransactionTable.get(transactionKey);
-
-        if (!transactionData || transactionData.trim() === "") {
-            continue;
-        }
-
-        const transactionsList = JSON.parse<Transac[]>(transactionData);
-
-        for (let j: i32 = 0; j < transactionsList.length; j++) {
-            const transaction = transactionsList[j];
-            const fromWalletPublicKey = transaction.FromID;
-            const toWalletPublicKey = transaction.ToID;
-            const amount = parseFloat(transaction.amount);
-
-            if (!uniqueWallets.has(fromWalletPublicKey)) {
-                uniqueWallets.set(fromWalletPublicKey, {
-                    walletPublicKey: "*".repeat(fromWalletPublicKey.length),
-                    estimateBalanceTo: 0,
-                    estimateBalanceFrom: 0,
-                    fraudStatus: false,
-                });
-            }
-            const fromEntry = uniqueWallets.get(fromWalletPublicKey)!;
-            if (transaction.transactionName === "Defund" || transaction.transactionName === "OfflinePayment") {
-                fromEntry.estimateBalanceFrom -= amount;
-                if (fromEntry.estimateBalanceFrom < 0) {
-                    fromEntry.fraudStatus = true;
+                if (!uniqueWallets.has(fromWalletPublicKey)) {
+                    uniqueWallets.set(fromWalletPublicKey, {
+                        walletPublicKey: fromWalletPublicKey,
+                        estimateBalanceTo: 0,
+                        estimateBalanceFrom: 0,
+                        fraudStatus: false,
+                    });
                 }
-            }
+                const fromEntry = uniqueWallets.get(fromWalletPublicKey)!;
+                if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
+                    fromEntry.estimateBalanceFrom -= amount;
+                    if (fromEntry.estimateBalanceFrom < 0) {
+                        fromEntry.fraudStatus = true;
+                    }
+                }
 
-            if (!uniqueWallets.has(toWalletPublicKey)) {
-                uniqueWallets.set(toWalletPublicKey, {
-                    walletPublicKey: "*".repeat(toWalletPublicKey.length),
-                    estimateBalanceTo: 0,
-                    estimateBalanceFrom: 0,
-                    fraudStatus: false,
-                });
-            }
-            const toEntry = uniqueWallets.get(toWalletPublicKey)!;
-            if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
-                toEntry.estimateBalanceTo += amount;
-                if (toEntry.estimateBalanceTo < 0) {
-                    toEntry.fraudStatus = true;
+                if (!uniqueWallets.has(toWalletPublicKey)) {
+                    uniqueWallets.set(toWalletPublicKey, {
+                        walletPublicKey: toWalletPublicKey,
+                        estimateBalanceTo: 0,
+                        estimateBalanceFrom: 0,
+                        fraudStatus: false,
+                    });
+                }
+                const toEntry = uniqueWallets.get(toWalletPublicKey)!;
+                if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
+                    toEntry.estimateBalanceTo += amount;
+                    if (toEntry.estimateBalanceTo < 0) {
+                        toEntry.fraudStatus = true;
+                    }
                 }
             }
         }
     }
 
+    // Prepare walletPublicKeys output
     const walletPublicKeys: string[] = [];
-    let index: i32 = 1;
     const uniqueWalletKeys = uniqueWallets.keys();
+    let index = 1;
+
     for (let i: i32 = 0; i < uniqueWalletKeys.length; i++) {
         const key = uniqueWalletKeys[i];
         const wallet = uniqueWallets.get(key)!;
         const type = wallet.estimateBalanceFrom !== 0 ? "FromID" : "ToID";
+
         walletPublicKeys.push(
             `WalletPublicKey${index}: ${type} : ${wallet.walletPublicKey}, EstimateBalanceTo: ${wallet.estimateBalanceTo}, EstimateBalanceFrom: ${wallet.estimateBalanceFrom}, FraudStatus: ${wallet.fraudStatus}`
         );
