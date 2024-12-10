@@ -173,7 +173,8 @@ export function listAllTransactions(): void {
     // Respond with all transactions
     const output: TransactionListOutput = {
         success: true,
-        transactionList: allTransactions
+        transactionList: allTransactions,
+        walletPublicKeys: []
     };
 
     Notifier.sendJson<TransactionListOutput>(output);
@@ -181,51 +182,46 @@ export function listAllTransactions(): void {
 
 
 /**
- * @query
- * Fetch all wallet keys, calculate fraud status based on balance, and provide masked keys and balances.
- */
+* @query
+* Fetch all wallet keys, their balances, and calculate fraud status based on the balanceTable.
+*/
 export function listAllWalletPublicKeys(): void {
-    const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
-    
-    // Retrieve all keys from the balance table
-    const keysList = balanceTable.get("keysList");
-    const keysListHex  = keysList;
-    // const keysListHex = balanceTable.get("keyList");
-    if (!keysList) {
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "No keys found in the balance table.",
-        });
-        return;
-    }
+   const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
 
-    // const keysList = JSON.parse<string[]>(keysListHex);
-    const walletData: string[] = [];
+   // Retrieve all wallet keys from the balance table
+   const keysListHex = balanceTable.get("keysList");
+   if (!keysListHex || keysListHex.trim() === "[]") {
+       Notifier.sendJson<ErrorMessage>({
+           success: false,
+           message: "No keys found in the balance table.",
+       });
+       return;
+   }
 
-    for (let i = 0; i < keysList.length; i++) {
-        const key = keysList[i];
-        const balanceHex = balanceTable.get(key) || "0x0"; // Retrieve balance in hex
-        const balance = parseInt(balanceHex, 16); // Convert to decimal
+   const keysList = JSON.parse<string[]>(keysListHex); // Parse the list of keys
+   const walletData: string[] = [];
 
-        // Determine fraud status
-        const fraudStatus = balance < 0;
+   for (let i = 0; i < keysList.length; i++) {
+       const key = keysList[i];
+       const balanceHex = balanceTable.get(key) || "0x0"; // Retrieve the balance
+       const balance = parseInt(balanceHex, 16); // Convert hex balance to decimal
 
-        // Mask the key and balance
-        const maskedKey = key.slice(0, 4) + "*".repeat(key.length - 8) + key.slice(-4); // Mask key except first and last 4 characters
-        const maskedBalance = "*".repeat(balanceHex.length); // Fully mask the balance
+       // Determine fraud status
+       const fraudStatus = balance < 0;
 
-        // Format the wallet data
-        walletData.push(
-            `WalletPublicKey${i + 1}: ${maskedKey}, Balance: ${maskedBalance}, FraudStatus: ${fraudStatus}`
-        );
-    }
+       // Format the wallet data
+       walletData.push(
+           `WalletPublicKey${i + 1}:${key}, Balance: ${balance}, FraudStatus: ${fraudStatus}`
+       );
+   }
 
-    // Send the response
-    Notifier.sendJson<StoredKeys>({
-        success: true,
-        walletPublicKeys: walletData,
-    });
+   // Send the response
+   Notifier.sendJson<StoredKeys>({
+       success: true,
+       walletPublicKeys: walletData
+   });
 }
+
 
 /**
  * @transaction
