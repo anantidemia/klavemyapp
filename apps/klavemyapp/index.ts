@@ -117,67 +117,27 @@ export function storeTransaction(input: Transac): void {
 }
 
 
+
 /**
  * @query
- * List all transactions stored in the secureElementTransactionTable with fraudStatus determined by balances in the balanceTable.
+ * List all transactions stored in the secureElementTransactionTable.
  */
 export function listAllTransactions(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-    const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
 
-    // Retrieve the list of keys
-    const keysList = seTransactionTable.get("keysList");
-    const transactionKeys: string[] = keysList ? JSON.parse<string[]>(keysList) : [];
-
-    // Initialize array to hold all transactions
-    const allTransactions: Transac[] = [];
-
-    for (let i = 0; i < transactionKeys.length; i++) {
-        const transactionData = seTransactionTable.get(transactionKeys[i]);
-        if (transactionData && transactionData.trim() !== "") {
-            const allTransactionsForKey = JSON.parse<Transac[]>(transactionData);
-
-            for (let j = 0; j < allTransactionsForKey.length; j++) {
-                const transac = allTransactionsForKey[j];
-                const transactionToAdd = new Transac();
-
-                // Retrieve balances from balanceTable
-                const toBalanceHex = balanceTable.get(transac.ToID) || "0x0";
-                const fromBalanceHex = balanceTable.get(transac.FromID) || "0x0";
-
-                // Convert hex balances to decimal
-                const toBalance = parseInt(toBalanceHex, 16);
-                const fromBalance = parseInt(fromBalanceHex, 16);
-
-                // Determine fraud status based on balances
-                const fraudStatus = toBalance < 0 || fromBalance < 0;
-
-                // Add transaction details
-                transactionToAdd.walletPublicKey = transac.walletPublicKey;
-                transactionToAdd.synchronizationDate = transac.synchronizationDate;
-                transactionToAdd.transactionName = transac.transactionName;
-                transactionToAdd.FromID = transac.FromID;
-                transactionToAdd.ToID = transac.ToID;
-                transactionToAdd.nonce = transac.nonce;
-                transactionToAdd.amount = transac.amount;
-                transactionToAdd.generation = transac.generation;
-                transactionToAdd.currencycode = transac.currencycode;
-                transactionToAdd.txdate = transac.txdate;
-                transactionToAdd.fraudStatus = fraudStatus;
-
-                allTransactions.push(transactionToAdd);
-            }
-        }
-    }
+    // Retrieve all transactions
+    const transactionData = seTransactionTable.get("allTransactions") || "[]";
+    const allTransactions = JSON.parse<Transac[]>(transactionData);
 
     // Respond with all transactions
     const output: TransactionListOutput = {
         success: true,
-        transactionList: allTransactions
+        transactionList: allTransactions,
     };
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
+
 
 
 /**
@@ -186,7 +146,7 @@ export function listAllTransactions(): void {
  */
 export function listAllWalletPublicKeys(): void {
     const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
-
+    
     // Retrieve all keys from the balance table
     const keysList = balanceTable.get("keysList");
     const keysListHex  = keysList;
