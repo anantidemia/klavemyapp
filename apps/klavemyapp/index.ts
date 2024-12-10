@@ -19,7 +19,7 @@ import {
     WalletStatus
 } from './types';
 import { getDate } from './utils';
-import { amountHexToNumber } from './utils';
+
 
 const myTableName = "my_storage_table";
 const secureElementTable = "se_table";
@@ -176,52 +176,39 @@ export function storeTransaction(input: Transac): void {
         return;
     }
 
-    // Convert the hex amount to a number
-    const numericAmount = amountHexToNumber(input.amount);
-
-    // Initialize balances to zero
+    // Initialize balances
     let estimateBalanceTo: i32 = 0;
     let estimateBalanceFrom: i32 = 0;
 
-    // Retrieve existing transactions for FromID and ToID
+    // Retrieve transactions for the FromID and ToID
     const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
     const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
-
     const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
     const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
 
-    const isFromIDExists = fromTransactions.length > 0;
-    const isToIDExists = toTransactions.length > 0;
-
-    // If both FromID and ToID exist, calculate balances
-    if (isFromIDExists && isToIDExists) {
-        if (input.transactionName === "Fund") {
-            estimateBalanceTo += <i32>Math.floor(numericAmount);
-        } else if (input.transactionName === "Defund") {
-            estimateBalanceFrom -= <i32>Math.floor(numericAmount);
-        } else if (input.transactionName === "OfflinePayment") {
-            estimateBalanceTo += <i32>Math.floor(numericAmount);
-            estimateBalanceFrom -= <i32>Math.floor(numericAmount);
-        }
+    // Adjust balances based on transaction type
+    if (input.transactionName === "Fund") {
+        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
+    } else if (input.transactionName === "Defund") {
+        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
+    } else if (input.transactionName === "OfflinePayment") {
+        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
+        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
     }
 
     // Determine fraud status
     const fraudStatus: bool = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
 
-    // Include balances and fraud status in the transaction
+    // Include the balances and fraudStatus in the transaction
     input.estimateBalanceTo = estimateBalanceTo;
     input.estimateBalanceFrom = estimateBalanceFrom;
     input.fraudStatus = fraudStatus;
 
-    // Append the transaction to FromID
+    // Add the transaction to FromID and ToID
     fromTransactions.push(input);
+    toTransactions.push(input);
     seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-
-    // Avoid duplicating logs for ToID when FromID is the same as ToID
-    if (input.FromID !== input.ToID) {
-        toTransactions.push(input);
-        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
-    }
+    seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
 
     // Maintain a list of keys in the table
     const keysList = seTransactionTable.get("keysList") || "[]";
@@ -241,7 +228,10 @@ export function storeTransaction(input: Transac): void {
 }
 
 
-
+// /**
+//  * @query
+//  * List all transactions stored in the secureElementTransactionTable.
+//  */
 /**
  * @query
  * List all transactions stored in the secureElementTransactionTable with dynamic balance calculations.
@@ -268,17 +258,14 @@ export function listAllTransactions(): void {
                 const transac = allTransactionsForKey[j];
                 const transactionToAdd = new Transac();
 
-                // Convert the hex amount to a number
-                const numericAmount = amountHexToNumber(transac.amount);
-
                 // Recalculate balances dynamically
                 if (transac.transactionName === "Fund") {
-                    estimateBalanceTo += <i32>Math.floor(numericAmount);
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
                 } else if (transac.transactionName === "Defund") {
-                    estimateBalanceFrom -= <i32>Math.floor(numericAmount);
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
                 } else if (transac.transactionName === "OfflinePayment") {
-                    estimateBalanceTo += <i32>Math.floor(numericAmount);
-                    estimateBalanceFrom -= <i32>Math.floor(numericAmount);
+                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
                 }
 
                 // Determine fraud status dynamically
@@ -315,7 +302,6 @@ export function listAllTransactions(): void {
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
-
 
 
 
@@ -613,6 +599,7 @@ export function listAllTransactionsObfuscated(): void {
 /**
  * @transaction
  * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
+ * Additionally, lists all wallet public keys in the response.
  */
 export function revealTransactions(input: RevealTransactionsInput): void {
     const requiredKeys: string[] = ["d23c2888169c", "40610b3cf4df", "abb4a17bfbf0"]; // Required keys
@@ -705,10 +692,77 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         }
     }
 
-    // Respond with transactions
+    // ** Logic for listAllWalletPublicKeys **
+    const uniqueWallets = new Map<string, WalletStatus>();
+
+    for (let i: i32 = 0; i < transactionKeys.length; i++) {
+        const transactionKey = transactionKeys[i];
+        const transactionData = seTransactionTable.get(transactionKey);
+
+        if (!transactionData || transactionData.trim() === "") {
+            continue;
+        }
+
+        const transactionsList = JSON.parse<Transac[]>(transactionData);
+
+        for (let j: i32 = 0; j < transactionsList.length; j++) {
+            const transaction = transactionsList[j];
+            const fromWalletPublicKey = transaction.FromID;
+            const toWalletPublicKey = transaction.ToID;
+            const amount = parseFloat(transaction.amount);
+
+            if (!uniqueWallets.has(fromWalletPublicKey)) {
+                uniqueWallets.set(fromWalletPublicKey, {
+                    walletPublicKey: "*".repeat(fromWalletPublicKey.length),
+                    estimateBalanceTo: 0,
+                    estimateBalanceFrom: 0,
+                    fraudStatus: false,
+                });
+            }
+            const fromEntry = uniqueWallets.get(fromWalletPublicKey)!;
+            if (transaction.transactionName === "Defund" || transaction.transactionName === "OfflinePayment") {
+                fromEntry.estimateBalanceFrom -= amount;
+                if (fromEntry.estimateBalanceFrom < 0) {
+                    fromEntry.fraudStatus = true;
+                }
+            }
+
+            if (!uniqueWallets.has(toWalletPublicKey)) {
+                uniqueWallets.set(toWalletPublicKey, {
+                    walletPublicKey: "*".repeat(toWalletPublicKey.length),
+                    estimateBalanceTo: 0,
+                    estimateBalanceFrom: 0,
+                    fraudStatus: false,
+                });
+            }
+            const toEntry = uniqueWallets.get(toWalletPublicKey)!;
+            if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
+                toEntry.estimateBalanceTo += amount;
+                if (toEntry.estimateBalanceTo < 0) {
+                    toEntry.fraudStatus = true;
+                }
+            }
+        }
+    }
+
+    const walletPublicKeys: string[] = [];
+    let index: i32 = 1;
+    const uniqueWalletKeys = uniqueWallets.keys();
+    for (let i: i32 = 0; i < uniqueWalletKeys.length; i++) {
+        const key = uniqueWalletKeys[i];
+        const wallet = uniqueWallets.get(key)!;
+        const type = wallet.estimateBalanceFrom !== 0 ? "FromID" : "ToID";
+        walletPublicKeys.push(
+            `WalletPublicKey${index}: ${type} : ${wallet.walletPublicKey}, EstimateBalanceTo: ${wallet.estimateBalanceTo}, EstimateBalanceFrom: ${wallet.estimateBalanceFrom}, FraudStatus: ${wallet.fraudStatus}`
+        );
+        index++;
+    }
+
+    // Combine both responses
     const output: TransactionListOutput = {
         success: true,
         transactionList: transactions,
+        walletPublicKeys: walletPublicKeys,
         has_next: false,
         last_evaluated_key: "",
         date: getDate().toString(),
