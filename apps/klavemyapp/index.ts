@@ -749,12 +749,12 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         // Handle separate entries for OfflinePayment
         if (wallet.estimateBalanceFrom !== 0) {
             walletPublicKeys.push(
-                `WalletPublicKey${index++}: FromID : ${wallet.walletPublicKey}, EstimateBalanceFrom: ${wallet.estimateBalanceFrom}, FraudStatus: ${wallet.fraudStatus}`
+                `WalletPublicKey${index++}: ${wallet.walletPublicKey}, Balance: ${wallet.estimateBalanceFrom}, FraudStatus: ${wallet.fraudStatus}`
             );
         }
         if (wallet.estimateBalanceTo !== 0) {
             walletPublicKeys.push(
-                `WalletPublicKey${index++}: ToID : ${wallet.walletPublicKey}, EstimateBalanceTo: ${wallet.estimateBalanceTo}, FraudStatus: ${wallet.fraudStatus}`
+                `WalletPublicKey${index++}:${wallet.walletPublicKey}, Balance: ${wallet.estimateBalanceTo}, FraudStatus: ${wallet.fraudStatus}`
             );
         }
     }
