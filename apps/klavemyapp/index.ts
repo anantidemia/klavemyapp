@@ -11,7 +11,7 @@ import {
     RevealTransactionsInput,
     WalletStatus
 } from './types';
-import { getDate } from './utils';
+import { amountHexToNumber } from './utils';
 
 
 const secureElementTransactionTable = "transaction_table";
@@ -46,8 +46,8 @@ export function storeTransaction(input: Transac): void {
         return;
     }
 
-    // Parse the amount from hex to decimal
-    const hexAmount = parseInt(input.amount, 16); // Convert hex amount to integer for calculations
+    // Convert the hex amount to a decimal number
+    const decimalAmount = amountHexToNumber(input.amount);
 
     // Retrieve or initialize keysList from the balanceTable
     const keysListHex = balanceTable.get("keysList") || "[]";
@@ -55,20 +55,18 @@ export function storeTransaction(input: Transac): void {
 
     // Update balances in the balanceTable
     if (input.transactionName === "Fund") {
-        const existingBalanceHex = balanceTable.get(input.ToID) || "0x0";
-        const existingBalance = parseInt(existingBalanceHex, 16);
-        const newBalance = existingBalance + hexAmount;
-        balanceTable.set(input.ToID, `0x${newBalance.toString(16)}`);
+        const existingBalance = parseFloat(balanceTable.get(input.ToID) || "0") || 0;
+        const newBalance = existingBalance + decimalAmount;
+        balanceTable.set(input.ToID, newBalance.toString());
 
         // Add ToID to keysList if not present
         if (!keysList.includes(input.ToID)) {
             keysList.push(input.ToID);
         }
     } else if (input.transactionName === "Defund") {
-        const existingBalanceHex = balanceTable.get(input.FromID) || "0x0";
-        const existingBalance = parseInt(existingBalanceHex, 16);
-        const newBalance = existingBalance - hexAmount;
-        balanceTable.set(input.FromID, `0x${newBalance.toString(16)}`);
+        const existingBalance = parseFloat(balanceTable.get(input.FromID) || "0") || 0;
+        const newBalance = existingBalance - decimalAmount;
+        balanceTable.set(input.FromID, newBalance.toString());
 
         // Add FromID to keysList if not present
         if (!keysList.includes(input.FromID)) {
@@ -76,16 +74,14 @@ export function storeTransaction(input: Transac): void {
         }
     } else if (input.transactionName === "OfflinePayment") {
         // Update ToID balance
-        const toBalanceHex = balanceTable.get(input.ToID) || "0x0";
-        const toBalance = parseInt(toBalanceHex, 16);
-        const newToBalance = toBalance + hexAmount;
-        balanceTable.set(input.ToID, `0x${newToBalance.toString(16)}`);
+        const toBalance = parseFloat(balanceTable.get(input.ToID) || "0") || 0;
+        const newToBalance = toBalance + decimalAmount;
+        balanceTable.set(input.ToID, newToBalance.toString());
 
         // Update FromID balance
-        const fromBalanceHex = balanceTable.get(input.FromID) || "0x0";
-        const fromBalance = parseInt(fromBalanceHex, 16);
-        const newFromBalance = fromBalance - hexAmount;
-        balanceTable.set(input.FromID, `0x${newFromBalance.toString(16)}`);
+        const fromBalance = parseFloat(balanceTable.get(input.FromID) || "0") || 0;
+        const newFromBalance = fromBalance - decimalAmount;
+        balanceTable.set(input.FromID, newFromBalance.toString());
 
         // Add both ToID and FromID to keysList if not present
         if (!keysList.includes(input.ToID)) {
@@ -101,19 +97,16 @@ export function storeTransaction(input: Transac): void {
 
     // Update secureElementTransactionTable
     if (input.transactionName === "Fund") {
-        // Add transaction to ToID
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
         toTransactions.push(input);
         seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     } else if (input.transactionName === "Defund") {
-        // Add transaction to FromID
         const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
         const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
         fromTransactions.push(input);
         seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
     } else if (input.transactionName === "OfflinePayment") {
-        // Add transaction to both FromID and ToID
         const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
         const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
         fromTransactions.push(input);
@@ -130,7 +123,6 @@ export function storeTransaction(input: Transac): void {
         success: true,
     });
 }
-
 
 
 /**
