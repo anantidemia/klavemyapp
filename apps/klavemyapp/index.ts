@@ -142,15 +142,11 @@ export function listAllWalletPublicKeys(): void {
         let balanceHex = balanceTable.get(key); // Retrieve balance in hex
 
         if (!balanceHex) {
-            console.log(`Key ${key} not found in balanceTable. Defaulting to 0x0.`);
             balanceHex = "0x0"; // Default to 0 if not found
         }
 
         const balance = parseInt(balanceHex, 16); // Convert to decimal for fraud check
         const fraudStatus = balance < 0;
-
-        console.log(`Fetched Balance for Key ${key}: ${balanceHex}`);
-
         walletData.push(
             `WalletPublicKey${i + 1}:${key}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
         );
