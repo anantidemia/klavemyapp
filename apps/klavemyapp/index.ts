@@ -189,24 +189,28 @@ export function storeTransaction(input: Transac): void {
     const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
     const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
 
-    // Adjust balances based on transaction type
-    if (input.transactionName === "Fund") {
-        estimateBalanceTo += convertedAmount;
-    } else if (input.transactionName === "Defund") {
-        estimateBalanceFrom -= convertedAmount;
-    } else if (input.transactionName === "OfflinePayment") {
-        estimateBalanceTo += convertedAmount;
-        estimateBalanceFrom -= convertedAmount;
-    }
 
     // Determine fraud status
     const fraudStatus: boolean = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
 
-    // Include the balances and fraudStatus in the transaction
-    input.estimateBalanceTo = estimateBalanceTo;
-    input.estimateBalanceFrom = estimateBalanceFrom;
     input.fraudStatus = fraudStatus;
 
+        // Adjust balances based on transaction type
+    if (input.transactionName === "Fund") {
+        estimateBalanceTo += convertedAmount;
+        input.estimateBalanceTo = estimateBalanceTo; // Store only estimateBalanceTo
+        input.estimateBalanceFrom = 0; // Set estimateBalanceFrom to 0
+    } else if (input.transactionName === "Defund") {
+        estimateBalanceFrom -= convertedAmount;
+        input.estimateBalanceFrom = estimateBalanceFrom; // Store only estimateBalanceFrom
+        input.estimateBalanceTo = 0; // Set estimateBalanceTo to 0
+    } else if (input.transactionName === "OfflinePayment") {
+        estimateBalanceTo += convertedAmount;
+        estimateBalanceFrom -= convertedAmount;
+        input.estimateBalanceTo = estimateBalanceTo; // Store the balance for both
+        input.estimateBalanceFrom = estimateBalanceFrom;
+    }
+    
     // Add the transaction to FromID and ToID
     fromTransactions.push(input);
     toTransactions.push(input);
