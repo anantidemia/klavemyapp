@@ -14,9 +14,9 @@ import {
 import { getDate } from './utils';
 
 
-const myTableName = "my_storage_table";
-const secureElementTable = "se_table";
 const secureElementTransactionTable = "transaction_table";
+
+const balanceTableName = "balance_table"; // Name of the new table for storing balances
 
 /**
  * @transaction
@@ -24,6 +24,7 @@ const secureElementTransactionTable = "transaction_table";
  */
 export function storeTransaction(input: Transac): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+    const balanceTable = Ledger.getTable(balanceTableName); // Access the new balance table
 
     // Validate input
     if (
@@ -45,62 +46,77 @@ export function storeTransaction(input: Transac): void {
         return;
     }
 
-    // Initialize balances
-    let estimateBalanceTo: i32 = 0;
-    let estimateBalanceFrom: i32 = 0;
+    // Parse the amount from hex to decimal
+    const hexAmount = parseInt(input.amount, 16); // Convert hex amount to integer for calculations
 
-    // Retrieve transactions for the FromID and ToID
-    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
-    const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
-    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-    const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
-
-    // Adjust balances based on transaction type
+    // Update balances in balanceTable
     if (input.transactionName === "Fund") {
-        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
+        const existingBalanceHex = balanceTable.get(input.ToID) || "0x0";
+        const existingBalance = parseInt(existingBalanceHex, 16);
+        const newBalance = existingBalance + hexAmount;
+        balanceTable.set(input.ToID, `0x${newBalance.toString(16)}`);
     } else if (input.transactionName === "Defund") {
-        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
+        const existingBalanceHex = balanceTable.get(input.FromID) || "0x0";
+        const existingBalance = parseInt(existingBalanceHex, 16);
+        const newBalance = existingBalance - hexAmount;
+        balanceTable.set(input.FromID, `0x${newBalance.toString(16)}`);
     } else if (input.transactionName === "OfflinePayment") {
-        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
-        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
+        const toBalanceHex = balanceTable.get(input.ToID) || "0x0";
+        const toBalance = parseInt(toBalanceHex, 16);
+        const newToBalance = toBalance + hexAmount;
+        balanceTable.set(input.ToID, `0x${newToBalance.toString(16)}`);
+
+        const fromBalanceHex = balanceTable.get(input.FromID) || "0x0";
+        const fromBalance = parseInt(fromBalanceHex, 16);
+        const newFromBalance = fromBalance - hexAmount;
+        balanceTable.set(input.FromID, `0x${newFromBalance.toString(16)}`);
     }
 
-    // Determine fraud status
-    const fraudStatus: bool = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
+    // Update secureElementTransactionTable
+    if (input.transactionName === "Fund") {
+        // Add transaction to ToID
+        const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
+        const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
+        toTransactions.push(input);
+        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
+    } else if (input.transactionName === "Defund") {
+        // Add transaction to FromID
+        const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+        const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+        fromTransactions.push(input);
+        seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
+    } else if (input.transactionName === "OfflinePayment") {
+        // Add transaction to both FromID and ToID
+        const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+        const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+        fromTransactions.push(input);
+        seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
 
-    // Include the balances and fraudStatus in the transaction
-    input.estimateBalanceTo = estimateBalanceTo;
-    input.estimateBalanceFrom = estimateBalanceFrom;
-    input.fraudStatus = fraudStatus;
+        const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
+        const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
+        toTransactions.push(input);
+        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
+    }
 
-    // Add the transaction to FromID and ToID
-    fromTransactions.push(input);
-    toTransactions.push(input);
-    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-    seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
-
-    // Maintain a list of keys in the table
+    // Maintain a list of keys in secureElementTransactionTable
     const keysList = seTransactionTable.get("keysList") || "[]";
     const keys = JSON.parse<Array<string>>(keysList);
 
-    if (!keys.includes(input.FromID)) {
+    if (!keys.includes(input.FromID) && input.transactionName !== "Fund") {
         keys.push(input.FromID);
     }
-    if (!keys.includes(input.ToID)) {
+    if (!keys.includes(input.ToID) && input.transactionName !== "Defund") {
         keys.push(input.ToID);
     }
     seTransactionTable.set("keysList", JSON.stringify(keys));
 
+    // Respond with success
     Notifier.sendJson<StoreOutput>({
         success: true,
     });
 }
 
 
-// /**
-//  * @query
-//  * List all transactions stored in the secureElementTransactionTable.
-//  */
 /**
  * @query
  * List all transactions stored in the secureElementTransactionTable with dynamic balance calculations.
@@ -172,43 +188,6 @@ export function listAllTransactions(): void {
     Notifier.sendJson<TransactionListOutput>(output);
 }
 
-
-
-// /**
-//  * @query
-//  * @param {SecureElementKey} input - A parsed input argument
-//  */
-// export function listTransactionsByWalletPublicKeys(input: SecureElementKey): void {
-//     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-//     const transactionList = seTransactionTable.get(input.walletPublicKey);
-
-//     if (!transactionList || transactionList.length === 0) {
-//         Notifier.sendJson<ErrorMessage>({
-//             success: false,
-//             message: `No transactions found for key '${input.walletPublicKey}'`
-//         });
-//         return;
-//     }
-
-//     // Parse the list of transactions
-//     let listTransactionsOutput: Transac[] = JSON.parse<Transac[]>(transactionList);
-
-//     // Sort by walletPublicKey in ascending order and by txdate in descending order
-//     listTransactionsOutput = listTransactionsOutput.sort((a, b) => {
-//         if (a.walletPublicKey < b.walletPublicKey) return -1;
-//         if (a.walletPublicKey > b.walletPublicKey) return 1;
-//         // Sort by txdate in descending order
-//         return b.txdate.localeCompare(a.txdate);
-//     });
-
-//     Notifier.sendJson<TransactionListOutput >({
-//         success: true,
-//         transactionList: listTransactionsOutput,
-//         has_next: true,
-//         last_evaluated_key: "1732558315756",
-//         date: "2024-11-26T08:14:29.205576" // Current date and time in ISO format
-//     });
-// }
 
 /**
  * @query
