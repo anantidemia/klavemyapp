@@ -19,7 +19,7 @@ import {
     WalletStatus
 } from './types';
 import { getDate } from './utils';
-
+import { amountHexToNumber } from './utils';
 
 const myTableName = "my_storage_table";
 const secureElementTable = "se_table";
@@ -176,39 +176,52 @@ export function storeTransaction(input: Transac): void {
         return;
     }
 
-    // Initialize balances
+    // Convert the hex amount to a number
+    const numericAmount = amountHexToNumber(input.amount);
+
+    // Initialize balances to zero
     let estimateBalanceTo: i32 = 0;
     let estimateBalanceFrom: i32 = 0;
 
-    // Retrieve transactions for the FromID and ToID
+    // Retrieve existing transactions for FromID and ToID
     const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
     const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
+
     const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
     const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
 
-    // Adjust balances based on transaction type
-    if (input.transactionName === "Fund") {
-        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
-    } else if (input.transactionName === "Defund") {
-        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
-    } else if (input.transactionName === "OfflinePayment") {
-        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
-        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
+    const isFromIDExists = fromTransactions.length > 0;
+    const isToIDExists = toTransactions.length > 0;
+
+    // If both FromID and ToID exist, calculate balances
+    if (isFromIDExists && isToIDExists) {
+        if (input.transactionName === "Fund") {
+            estimateBalanceTo += <i32>Math.floor(numericAmount);
+        } else if (input.transactionName === "Defund") {
+            estimateBalanceFrom -= <i32>Math.floor(numericAmount);
+        } else if (input.transactionName === "OfflinePayment") {
+            estimateBalanceTo += <i32>Math.floor(numericAmount);
+            estimateBalanceFrom -= <i32>Math.floor(numericAmount);
+        }
     }
 
     // Determine fraud status
     const fraudStatus: bool = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
 
-    // Include the balances and fraudStatus in the transaction
+    // Include balances and fraud status in the transaction
     input.estimateBalanceTo = estimateBalanceTo;
     input.estimateBalanceFrom = estimateBalanceFrom;
     input.fraudStatus = fraudStatus;
 
-    // Add the transaction to FromID and ToID
+    // Append the transaction to FromID
     fromTransactions.push(input);
-    toTransactions.push(input);
     seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-    seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
+
+    // Avoid duplicating logs for ToID when FromID is the same as ToID
+    if (input.FromID !== input.ToID) {
+        toTransactions.push(input);
+        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
+    }
 
     // Maintain a list of keys in the table
     const keysList = seTransactionTable.get("keysList") || "[]";
@@ -228,10 +241,7 @@ export function storeTransaction(input: Transac): void {
 }
 
 
-// /**
-//  * @query
-//  * List all transactions stored in the secureElementTransactionTable.
-//  */
+
 /**
  * @query
  * List all transactions stored in the secureElementTransactionTable with dynamic balance calculations.
@@ -258,14 +268,17 @@ export function listAllTransactions(): void {
                 const transac = allTransactionsForKey[j];
                 const transactionToAdd = new Transac();
 
+                // Convert the hex amount to a number
+                const numericAmount = amountHexToNumber(transac.amount);
+
                 // Recalculate balances dynamically
                 if (transac.transactionName === "Fund") {
-                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
+                    estimateBalanceTo += <i32>Math.floor(numericAmount);
                 } else if (transac.transactionName === "Defund") {
-                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                    estimateBalanceFrom -= <i32>Math.floor(numericAmount);
                 } else if (transac.transactionName === "OfflinePayment") {
-                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
-                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
+                    estimateBalanceTo += <i32>Math.floor(numericAmount);
+                    estimateBalanceFrom -= <i32>Math.floor(numericAmount);
                 }
 
                 // Determine fraud status dynamically
@@ -302,6 +315,7 @@ export function listAllTransactions(): void {
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
+
 
 
 
