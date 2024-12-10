@@ -185,38 +185,73 @@ export function listAllTransactions(): void {
  * Fetch all wallet keys, calculate fraud status based on balance, and provide masked keys and balances.
  */
 export function listAllWalletPublicKeys(): void {
-    const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable); // Access the transaction table
 
-    // Retrieve all keys from the balance table
-    const keysList = balanceTable.get("keysList");
-    const keysListHex  = keysList;
-    // const keysListHex = balanceTable.get("keyList");
-    if (!keysList) {
+    // Retrieve the list of keys from the transaction table
+    const keysListHex = seTransactionTable.get("keysList") || "[]";
+    const keysList = JSON.parse<string[]>(keysListHex);
+
+    if (keysList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: "No keys found in the balance table.",
+            message: "No wallet public keys found.",
         });
         return;
     }
 
-    // const keysList = JSON.parse<string[]>(keysListHex);
-    const walletData: string[] = [];
+    const walletBalances: Map<string, i32> = new Map(); // Map to track balances dynamically
 
+    // Iterate through all transactions for each key and calculate the balance
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
-        const balanceHex = balanceTable.get(key) || "0x0"; // Retrieve balance in hex
-        const balance = parseInt(balanceHex, 16); // Convert to decimal
+        const transactionsData = seTransactionTable.get(key) || "[]";
+        const transactions = JSON.parse<Array<Transac>>(transactionsData);
 
-        // Determine fraud status
+        for (let j = 0; j < transactions.length; j++) {
+            const transaction = transactions[j];
+            const amount: i32 = <i32>parseInt(transaction.amount, 16); // Convert hex amount to integer
+
+            // Update balance based on transaction type
+            if (transaction.transactionName === "Fund" && transaction.ToID === key) {
+                walletBalances.set(
+                    key,
+                    (walletBalances.get(key) || 0) + amount
+                );
+            } else if (transaction.transactionName === "Defund" && transaction.FromID === key) {
+                walletBalances.set(
+                    key,
+                    (walletBalances.get(key) || 0) - amount
+                );
+            } else if (transaction.transactionName === "OfflinePayment") {
+                if (transaction.ToID === key) {
+                    walletBalances.set(
+                        key,
+                        (walletBalances.get(key) || 0) + amount
+                    );
+                }
+                if (transaction.FromID === key) {
+                    walletBalances.set(
+                        key,
+                        (walletBalances.get(key) || 0) - amount
+                    );
+                }
+            }
+        }
+    }
+
+    const walletData: string[] = [];
+
+    // Prepare the wallet public key output with calculated balances
+    for (let i = 0; i < keysList.length; i++) {
+        const key = keysList[i];
+        const balance: i32 = walletBalances.get(key) || 0;
+        const balanceHex = balance < 0
+            ? `-0x${Math.abs(balance).toString(16)}`
+            : `0x${balance.toString(16)}`;
         const fraudStatus = balance < 0;
 
-        // Mask the key and balance
-        const maskedKey = key.slice(0, 4) + "*".repeat(key.length - 8) + key.slice(-4); // Mask key except first and last 4 characters
-        const maskedBalance = "*".repeat(balanceHex.length); // Fully mask the balance
-
-        // Format the wallet data
         walletData.push(
-            `WalletPublicKey${i + 1}: ${maskedKey}, Balance: ${maskedBalance}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey${i + 1}:${key}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
         );
     }
 
@@ -233,24 +268,39 @@ export function listAllWalletPublicKeys(): void {
  */
 export function deleteAllTransactionLogs(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+    const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
 
-    // Get the list of keys from the table
-    const keysList = seTransactionTable.get("keysList") || "[]";
-    const keys = JSON.parse<string[]>(keysList);
+    // Get the list of keys from the transaction table
+    const transactionKeysList = seTransactionTable.get("keysList") || "[]";
+    const transactionKeys = JSON.parse<string[]>(transactionKeysList);
 
     // Iterate through each key and clear its associated data
-    for (let i = 0; i < keys.length; i++) {
-        seTransactionTable.set(keys[i], ""); // Set an empty string to simulate deletion
+    for (let i = 0; i < transactionKeys.length; i++) {
+        seTransactionTable.set(transactionKeys[i], ""); // Set an empty string to simulate deletion
     }
 
-    // Clear the keysList
-    seTransactionTable.set("keysList", "[]"); // Reset the keysList to an empty array
+    // Clear the transaction keys list
+    seTransactionTable.set("keysList", "[]"); // Reset the keys list to an empty array
+
+    // Clear the balance table
+    const balanceKeysList = balanceTable.get("keysList") || "[]";
+    const balanceKeys = JSON.parse<string[]>(balanceKeysList);
+
+    // Iterate through each key in the balance table and clear associated data
+    for (let i = 0; i < balanceKeys.length; i++) {
+        balanceTable.set(balanceKeys[i], ""); // Clear balance data
+    }
+
+    // Clear the balance keys list
+    balanceTable.set("keysList", "[]"); // Reset the keys list to an empty array
 
     // Confirm deletion
     Notifier.sendJson<StoreOutput>({
-        success: true
+        success: true,
+      
     });
 }
+
 
 /**
  * @transaction
