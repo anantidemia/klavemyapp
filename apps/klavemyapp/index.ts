@@ -24,7 +24,7 @@ const balanceTableName = "balance_table"; // Name of the new table for storing b
  */
 export function storeTransaction(input: Transac): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-    const balanceTable = Ledger.getTable(balanceTableName); // Access the new balance table
+    const balanceTable = Ledger.getTable(balanceTableName);
 
     // Validate input
     if (
@@ -47,7 +47,7 @@ export function storeTransaction(input: Transac): void {
     }
 
     // Parse the amount from hex to decimal
-    const hexAmount = parseInt(input.amount, 16); // Convert hex amount to integer for calculations
+    const hexAmount = parseInt(input.amount, 16);
 
     // Update balances in balanceTable
     if (input.transactionName === "Fund") {
@@ -72,21 +72,30 @@ export function storeTransaction(input: Transac): void {
         balanceTable.set(input.FromID, `0x${newFromBalance.toString(16)}`);
     }
 
+    // Update keysList in balanceTable
+    const balanceKeysListHex = balanceTable.get("keysList") || "[]";
+    const balanceKeysList = JSON.parse<string[]>(balanceKeysListHex);
+
+    if (!balanceKeysList.includes(input.FromID)) {
+        balanceKeysList.push(input.FromID);
+    }
+    if (!balanceKeysList.includes(input.ToID)) {
+        balanceKeysList.push(input.ToID);
+    }
+    balanceTable.set("keysList", JSON.stringify(balanceKeysList));
+
     // Update secureElementTransactionTable
     if (input.transactionName === "Fund") {
-        // Add transaction to ToID
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
         toTransactions.push(input);
         seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     } else if (input.transactionName === "Defund") {
-        // Add transaction to FromID
         const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
         const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
         fromTransactions.push(input);
         seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
     } else if (input.transactionName === "OfflinePayment") {
-        // Add transaction to both FromID and ToID
         const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
         const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
         fromTransactions.push(input);
@@ -99,16 +108,16 @@ export function storeTransaction(input: Transac): void {
     }
 
     // Maintain a list of keys in secureElementTransactionTable
-    const keysList = seTransactionTable.get("keysList") || "[]";
-    const keys = JSON.parse<Array<string>>(keysList);
+    const seKeysList = seTransactionTable.get("keysList") || "[]";
+    const seKeys = JSON.parse<Array<string>>(seKeysList);
 
-    if (!keys.includes(input.FromID) && input.transactionName !== "Fund") {
-        keys.push(input.FromID);
+    if (!seKeys.includes(input.FromID) && input.transactionName !== "Fund") {
+        seKeys.push(input.FromID);
     }
-    if (!keys.includes(input.ToID) && input.transactionName !== "Defund") {
-        keys.push(input.ToID);
+    if (!seKeys.includes(input.ToID) && input.transactionName !== "Defund") {
+        seKeys.push(input.ToID);
     }
-    seTransactionTable.set("keysList", JSON.stringify(keys));
+    seTransactionTable.set("keysList", JSON.stringify(seKeys));
 
     // Respond with success
     Notifier.sendJson<StoreOutput>({
@@ -118,10 +127,19 @@ export function storeTransaction(input: Transac): void {
 
 
 export function listAllWalletPublicKeys(): void {
-    const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
+    const balanceTable = Ledger.getTable(balanceTableName);
+
+    // Check if the table exists
+    if (!balanceTable) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Balance table not found or not initialized.",
+        });
+        return;
+    }
 
     // Retrieve all keys from the balance table
-    const keysListHex = balanceTable.get("keysList") || "[]";
+    const keysListHex = balanceTable.get("keysList") || "[]"; // Default to an empty list
     const keysList = JSON.parse<string[]>(keysListHex);
 
     if (keysList.length === 0) {
