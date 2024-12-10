@@ -200,20 +200,24 @@ export function storeTransaction(input: Transac): void {
         estimateBalanceTo += convertedAmount;
         input.estimateBalanceTo = estimateBalanceTo; // Store only estimateBalanceTo
         input.estimateBalanceFrom = 0; // Set estimateBalanceFrom to 0
+        toTransactions.push(input);
     } else if (input.transactionName === "Defund") {
         estimateBalanceFrom -= convertedAmount;
         input.estimateBalanceFrom = estimateBalanceFrom; // Store only estimateBalanceFrom
         input.estimateBalanceTo = 0; // Set estimateBalanceTo to 0
+        fromTransactions.push(input);
     } else if (input.transactionName === "OfflinePayment") {
         estimateBalanceTo += convertedAmount;
         estimateBalanceFrom -= convertedAmount;
         input.estimateBalanceTo = estimateBalanceTo; // Store the balance for both
         input.estimateBalanceFrom = estimateBalanceFrom;
+        fromTransactions.push(input);
+        toTransactions.push(input);
     }
     
     // Add the transaction to FromID and ToID
-    fromTransactions.push(input);
-    toTransactions.push(input);
+    // fromTransactions.push(input);
+    // toTransactions.push(input);
     seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
     seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
 
