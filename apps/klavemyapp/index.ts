@@ -188,7 +188,9 @@ export function listAllWalletPublicKeys(): void {
     const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
 
     // Retrieve all keys from the balance table
-    const keysListHex = balanceTable.get("keyList");
+    const keysList = balanceTable.get("keysList");
+    const keysListHex  = keysList;
+    // const keysListHex = balanceTable.get("keyList");
     if (!keysListHex || keysListHex.trim() === "[]") {
         Notifier.sendJson<ErrorMessage>({
             success: false,
@@ -197,7 +199,7 @@ export function listAllWalletPublicKeys(): void {
         return;
     }
 
-    const keysList = JSON.parse<string[]>(keysListHex);
+    // const keysList = JSON.parse<string[]>(keysListHex);
     const walletData: string[] = [];
 
     for (let i = 0; i < keysList.length; i++) {
