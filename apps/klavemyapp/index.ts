@@ -656,7 +656,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 // Determine fraud status dynamically
                 const fraudStatus = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
 
-                if (keysMatch && fraudStatus) {
+                if (keysMatch) {
                     // Reveal all fields when keys match
                     transactionToAdd.walletPublicKey = transac.walletPublicKey;
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
@@ -745,12 +745,18 @@ export function revealTransactions(input: RevealTransactionsInput): void {
     for (let i: i32 = 0; i < uniqueWalletKeys.length; i++) {
         const key = uniqueWalletKeys[i];
         const wallet = uniqueWallets.get(key)!;
-        const type = wallet.estimateBalanceFrom !== 0 ? "FromID" : "ToID";
 
-        walletPublicKeys.push(
-            `WalletPublicKey${index}: ${type} : ${wallet.walletPublicKey}, EstimateBalanceTo: ${wallet.estimateBalanceTo}, EstimateBalanceFrom: ${wallet.estimateBalanceFrom}, FraudStatus: ${wallet.fraudStatus}`
-        );
-        index++;
+        // Handle separate entries for OfflinePayment
+        if (wallet.estimateBalanceFrom !== 0) {
+            walletPublicKeys.push(
+                `WalletPublicKey${index++}: FromID : ${wallet.walletPublicKey}, EstimateBalanceFrom: ${wallet.estimateBalanceFrom}, FraudStatus: ${wallet.fraudStatus}`
+            );
+        }
+        if (wallet.estimateBalanceTo !== 0) {
+            walletPublicKeys.push(
+                `WalletPublicKey${index++}: ToID : ${wallet.walletPublicKey}, EstimateBalanceTo: ${wallet.estimateBalanceTo}, FraudStatus: ${wallet.fraudStatus}`
+            );
+        }
     }
 
     // Combine both responses
