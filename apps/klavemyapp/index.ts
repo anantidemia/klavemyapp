@@ -49,28 +49,55 @@ export function storeTransaction(input: Transac): void {
     // Parse the amount from hex to decimal
     const hexAmount = parseInt(input.amount, 16); // Convert hex amount to integer for calculations
 
-    // Update balances in balanceTable
+    // Retrieve or initialize keysList from the balanceTable
+    const keysListHex = balanceTable.get("keysList") || "[]";
+    const keysList = JSON.parse<string[]>(keysListHex);
+
+    // Update balances in the balanceTable
     if (input.transactionName === "Fund") {
         const existingBalanceHex = balanceTable.get(input.ToID) || "0x0";
         const existingBalance = parseInt(existingBalanceHex, 16);
         const newBalance = existingBalance + hexAmount;
         balanceTable.set(input.ToID, `0x${newBalance.toString(16)}`);
+
+        // Add ToID to keysList if not present
+        if (!keysList.includes(input.ToID)) {
+            keysList.push(input.ToID);
+        }
     } else if (input.transactionName === "Defund") {
         const existingBalanceHex = balanceTable.get(input.FromID) || "0x0";
         const existingBalance = parseInt(existingBalanceHex, 16);
         const newBalance = existingBalance - hexAmount;
         balanceTable.set(input.FromID, `0x${newBalance.toString(16)}`);
+
+        // Add FromID to keysList if not present
+        if (!keysList.includes(input.FromID)) {
+            keysList.push(input.FromID);
+        }
     } else if (input.transactionName === "OfflinePayment") {
+        // Update ToID balance
         const toBalanceHex = balanceTable.get(input.ToID) || "0x0";
         const toBalance = parseInt(toBalanceHex, 16);
         const newToBalance = toBalance + hexAmount;
         balanceTable.set(input.ToID, `0x${newToBalance.toString(16)}`);
 
+        // Update FromID balance
         const fromBalanceHex = balanceTable.get(input.FromID) || "0x0";
         const fromBalance = parseInt(fromBalanceHex, 16);
         const newFromBalance = fromBalance - hexAmount;
         balanceTable.set(input.FromID, `0x${newFromBalance.toString(16)}`);
+
+        // Add both ToID and FromID to keysList if not present
+        if (!keysList.includes(input.ToID)) {
+            keysList.push(input.ToID);
+        }
+        if (!keysList.includes(input.FromID)) {
+            keysList.push(input.FromID);
+        }
     }
+
+    // Save the updated keysList back to the balanceTable
+    balanceTable.set("keysList", JSON.stringify(keysList));
 
     // Update secureElementTransactionTable
     if (input.transactionName === "Fund") {
@@ -98,23 +125,12 @@ export function storeTransaction(input: Transac): void {
         seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     }
 
-    // Maintain a list of keys in secureElementTransactionTable
-    const keysList = seTransactionTable.get("keysList") || "[]";
-    const keys = JSON.parse<Array<string>>(keysList);
-
-    if (!keys.includes(input.FromID) && input.transactionName !== "Fund") {
-        keys.push(input.FromID);
-    }
-    if (!keys.includes(input.ToID) && input.transactionName !== "Defund") {
-        keys.push(input.ToID);
-    }
-    seTransactionTable.set("keysList", JSON.stringify(keys));
-
     // Respond with success
     Notifier.sendJson<StoreOutput>({
         success: true,
     });
 }
+
 
 
 /**
