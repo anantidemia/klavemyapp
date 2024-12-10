@@ -124,6 +124,7 @@ export function storeTransaction(input: Transac): void {
 export function listAllWalletPublicKeys(): void {
     const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
 
+    // Retrieve all keys from the balance table
     const keysListHex = balanceTable.get("keysList") || "[]";
     const keysList = JSON.parse<string[]>(keysListHex);
 
@@ -137,21 +138,22 @@ export function listAllWalletPublicKeys(): void {
 
     const walletData: string[] = [];
 
+    // Iterate through all keys to fetch balances and determine fraud status
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
-        let balanceHex = balanceTable.get(key); // Retrieve balance in hex
-
-        if (!balanceHex) {
-            balanceHex = "0x0"; // Default to 0 if not found
-        }
-
+        const balanceHex = balanceTable.get(key) || "0x0"; // Retrieve balance in hex
         const balance = parseInt(balanceHex, 16); // Convert to decimal for fraud check
+
+        // Determine fraud status
         const fraudStatus = balance < 0;
+
+        // Format the wallet data
         walletData.push(
             `WalletPublicKey${i + 1}:${key}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
         );
     }
 
+    // Send the response
     Notifier.sendJson<StoredKeys>({
         success: true,
         walletPublicKeys: walletData,
