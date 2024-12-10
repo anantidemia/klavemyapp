@@ -218,10 +218,29 @@ export function listAllWalletPublicKeys(): void {
 
     const walletData: string[] = [];
 
+    // Helper function to check if a string is a valid hex value
+    function isValidHex(hex: string): bool {
+        if (!hex.startsWith("0x")) return false; // Must start with "0x"
+        for (let i = 2; i < hex.length; i++) {
+            const charCode = hex.charCodeAt(i);
+            // Check if the character is a valid hex digit (0-9, a-f, A-F)
+            const isDigit = charCode >= 48 && charCode <= 57;
+            const isLowerHex = charCode >= 97 && charCode <= 102;
+            const isUpperHex = charCode >= 65 && charCode <= 70;
+            if (!isDigit && !isLowerHex && !isUpperHex) return false;
+        }
+        return true;
+    }
+
     // Iterate through all keys to fetch balances and determine fraud status
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
-        const balanceHex = balanceTable.get(key) || "0x0"; // Retrieve balance in hex
+        let balanceHex = balanceTable.get(key); // Retrieve balance in hex
+
+        if (!balanceHex || !isValidHex(balanceHex)) {
+            balanceHex = "0x0"; // Default to 0 if invalid
+        }
+
         const balance = parseInt(balanceHex, 16); // Convert to decimal for fraud check
 
         // Determine fraud status
