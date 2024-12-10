@@ -18,12 +18,13 @@ import {
     RevealTransactionsInput,
     WalletStatus
 } from './types';
-import { getDate } from './utils';
+import { getDate , amountHexToNumber} from './utils';
 
 
 const myTableName = "my_storage_table";
 const secureElementTable = "se_table";
 const secureElementTransactionTable = "transaction_table";
+const secureElementBalanceTable = "balance_table";
 /**
  * @query
  * @param {FetchInput} input - A parsed input argument
@@ -155,7 +156,7 @@ export function listSecureElement(): void {
  */
 export function storeTransaction(input: Transac): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-
+    const seBalanceTable = Ledger.getTable(secureElementBalanceTable);
     // Validate input
     if (
         !input.walletPublicKey ||
@@ -176,9 +177,12 @@ export function storeTransaction(input: Transac): void {
         return;
     }
 
+    // Convert the amount
+    const convertedAmount = amountHexToNumber(input.amount);
+
     // Initialize balances
-    let estimateBalanceTo: i32 = 0;
-    let estimateBalanceFrom: i32 = 0;
+    let estimateBalanceTo: number = 0;
+    let estimateBalanceFrom: number = 0;
 
     // Retrieve transactions for the FromID and ToID
     const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
@@ -188,25 +192,35 @@ export function storeTransaction(input: Transac): void {
 
     // Adjust balances based on transaction type
     if (input.transactionName === "Fund") {
-        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
+        estimateBalanceTo += convertedAmount;
     } else if (input.transactionName === "Defund") {
-        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
+        estimateBalanceFrom -= convertedAmount;
     } else if (input.transactionName === "OfflinePayment") {
-        estimateBalanceTo += <i32>Math.floor(parseFloat(input.amount));
-        estimateBalanceFrom -= <i32>Math.floor(parseFloat(input.amount));
+        estimateBalanceTo += convertedAmount;
+        estimateBalanceFrom -= convertedAmount;
     }
 
     // Determine fraud status
-    const fraudStatus: bool = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
+    const fraudStatus: boolean = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
 
     // Include the balances and fraudStatus in the transaction
-    input.estimateBalanceTo = estimateBalanceTo;
-    input.estimateBalanceFrom = estimateBalanceFrom;
     input.fraudStatus = fraudStatus;
 
     // Add the transaction to FromID and ToID
-    fromTransactions.push(input);
-    toTransactions.push(input);
+    if (input.transactionName === "Fund") {
+        input.estimateBalanceTo = estimateBalanceTo;
+        toTransactions.push(input);
+        
+    }else if (input.transactionName === "Defund") {
+        input.estimateBalanceFrom = estimateBalanceFrom;
+        fromTransactions.push(input);
+    }else if (input.transactionName === "OfflinePayment") {
+        input.estimateBalanceTo = estimateBalanceTo;
+        input.estimateBalanceFrom = estimateBalanceFrom;
+        toTransactions.push(input);
+        fromTransactions.push(input);
+    }
+    
     seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
     seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
 
@@ -228,10 +242,6 @@ export function storeTransaction(input: Transac): void {
 }
 
 
-// /**
-//  * @query
-//  * List all transactions stored in the secureElementTransactionTable.
-//  */
 /**
  * @query
  * List all transactions stored in the secureElementTransactionTable with dynamic balance calculations.
