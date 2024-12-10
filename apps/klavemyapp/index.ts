@@ -656,7 +656,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 // Determine fraud status dynamically
                 const fraudStatus = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
 
-                if (keysMatch) {
+                if (keysMatch && fraudStatus) {
                     // Reveal all fields when keys match
                     transactionToAdd.walletPublicKey = transac.walletPublicKey;
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
