@@ -54,69 +54,66 @@ export function storeTransaction(input: Transac): void {
     const keysList = JSON.parse<string[]>(keysListHex);
 
     // Update balances in the balanceTable
-    if (input.transactionName === "Fund") {
-        const existingBalanceHex = balanceTable.get(input.ToID) || "0x0";
-        const existingBalance = parseInt(existingBalanceHex, 16); // Convert hex to decimal
-        const newBalance = existingBalance + hexAmount; // Perform addition in decimal
-        const newBalanceHex = `0x${newBalance.toString(16)}`;
-        balanceTable.set(input.ToID, newBalanceHex); // Store result in hex
+if (input.transactionName === "Fund") {
+    const existingBalanceHex = balanceTable.get(input.ToID) || "0x0";
+    const existingBalance = parseInt(existingBalanceHex, 16); // Convert hex to decimal
+    const newBalance = existingBalance + hexAmount; // Perform addition in decimal
+    balanceTable.set(input.ToID, `0x${newBalance.toString(16)}`); // Store result in hex
 
-
-        // Add ToID to keysList if not present
-        if (!keysList.includes(input.ToID)) {
-            keysList.push(input.ToID);
-        }
-    } else if (input.transactionName === "Defund") {
-        const existingBalanceHex = balanceTable.get(input.FromID) || "0x0";
-        const existingBalance = parseInt(existingBalanceHex, 16); // Convert hex to decimal
-        const newBalance = existingBalance - hexAmount; // Perform subtraction in decimal
-        const newBalanceHex = `0x${newBalance.toString(16)}`;
-        balanceTable.set(input.FromID, newBalanceHex); // Store result in hex
-
-        // Add FromID to keysList if not present
-        if (!keysList.includes(input.FromID)) {
-            keysList.push(input.FromID);
-        }
-    } else if (input.transactionName === "OfflinePayment") {
-        // Update ToID balance
-        const toBalanceHex = balanceTable.get(input.ToID) || "0x0";
-        const toBalance = parseInt(toBalanceHex, 16); // Convert hex to decimal
-        const newToBalance = toBalance + hexAmount; // Perform addition in decimal
-        const newToBalanceHex = `0x${newToBalance.toString(16)}`;
-        balanceTable.set(input.ToID, newToBalanceHex); // Store result in hex
-
-        // Update FromID balance
-        const fromBalanceHex = balanceTable.get(input.FromID) || "0x0";
-        const fromBalance = parseInt(fromBalanceHex, 16); // Convert hex to decimal
-        const newFromBalance = fromBalance - hexAmount; // Perform subtraction in decimal
-        const newFromBalanceHex = `0x${newFromBalance.toString(16)}`;
-        balanceTable.set(input.FromID, newFromBalanceHex); // Store result in hex
-
-
-        // Add both ToID and FromID to keysList if not present
-        if (!keysList.includes(input.ToID)) {
-            keysList.push(input.ToID);
-        }
-        if (!keysList.includes(input.FromID)) {
-            keysList.push(input.FromID);
-        }
+    // Add ToID to keysList if not present
+    if (!keysList.includes(input.ToID)) {
+        keysList.push(input.ToID);
     }
+} else if (input.transactionName === "Defund") {
+    const existingBalanceHex = balanceTable.get(input.FromID) || "0x0";
+    const existingBalance = parseInt(existingBalanceHex, 16); // Convert hex to decimal
+    const newBalance = existingBalance - hexAmount; // Perform subtraction in decimal
+    balanceTable.set(input.FromID, `0x${newBalance.toString(16)}`); // Store result in hex
+
+    // Add FromID to keysList if not present
+    if (!keysList.includes(input.FromID)) {
+        keysList.push(input.FromID);
+    }
+} else if (input.transactionName === "OfflinePayment") {
+    // Update ToID balance
+    const toBalanceHex = balanceTable.get(input.ToID) || "0x0";
+    const toBalance = parseInt(toBalanceHex, 16); // Convert hex to decimal
+    const newToBalance = toBalance + hexAmount; // Perform addition in decimal
+    balanceTable.set(input.ToID, `0x${newToBalance.toString(16)}`); // Store result in hex
+
+    // Update FromID balance
+    const fromBalanceHex = balanceTable.get(input.FromID) || "0x0";
+    const fromBalance = parseInt(fromBalanceHex, 16); // Convert hex to decimal
+    const newFromBalance = fromBalance - hexAmount; // Perform subtraction in decimal
+    balanceTable.set(input.FromID, `0x${newFromBalance.toString(16)}`); // Store result in hex
+
+    // Add both ToID and FromID to keysList if not present
+    if (!keysList.includes(input.ToID)) {
+        keysList.push(input.ToID);
+    }
+    if (!keysList.includes(input.FromID)) {
+        keysList.push(input.FromID);
+    }
+}
 
     // Save the updated keysList back to the balanceTable
     balanceTable.set("keysList", JSON.stringify(keysList));
 
     // Update secureElementTransactionTable
     if (input.transactionName === "Fund") {
+        // Add transaction to ToID
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
         toTransactions.push(input);
         seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     } else if (input.transactionName === "Defund") {
+        // Add transaction to FromID
         const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
         const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
         fromTransactions.push(input);
         seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
     } else if (input.transactionName === "OfflinePayment") {
+        // Add transaction to both FromID and ToID
         const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
         const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
         fromTransactions.push(input);
@@ -128,10 +125,12 @@ export function storeTransaction(input: Transac): void {
         seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     }
 
+    // Respond with success
     Notifier.sendJson<StoreOutput>({
         success: true,
     });
 }
+
 
 
 /**
@@ -203,31 +202,68 @@ export function listAllTransactions(): void {
  * Fetch all wallet keys, calculate fraud status based on balance, and provide keys and balances.
  */
 export function listAllWalletPublicKeys(): void {
-    const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
+    const seTransactionTable = Ledger.getTable(secureElementTransactionTable); // Access the transaction table
 
-    const keysListHex = balanceTable.get("keysList") || "[]";
+    // Retrieve the list of keys from the transaction table
+    const keysListHex = seTransactionTable.get("keysList") || "[]";
     const keysList = JSON.parse<string[]>(keysListHex);
 
     if (keysList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
-            message: "No keys found in the balance table.",
+            message: "No keys found in the transaction table.",
         });
         return;
     }
 
     const walletData: string[] = [];
+    const walletBalances: Map<string, i32> = new Map(); // Map to track balances dynamically
 
+    // Iterate through all transactions for each key and calculate the balance
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
-        let balanceHex = balanceTable.get(key); // Retrieve balance in hex
+        const transactionsData = seTransactionTable.get(key) || "[]";
+        const transactions = JSON.parse<Array<Transac>>(transactionsData);
 
-        if (!balanceHex) {
-            console.log(`Key ${key} not found in balanceTable. Defaulting to 0x0.`);
-            balanceHex = "0x0"; // Default to 0 if not found
+        for (let j = 0; j < transactions.length; j++) {
+            const transaction = transactions[j];
+            const amount: i32 = <i32>parseInt(transaction.amount, 16); // Convert hex amount to integer
+
+            // Update balance based on transaction type
+            if (transaction.transactionName === "Fund" && transaction.ToID === key) {
+                walletBalances.set(
+                    key,
+                    (walletBalances.get(key) || 0) + amount
+                );
+            } else if (transaction.transactionName === "Defund" && transaction.FromID === key) {
+                walletBalances.set(
+                    key,
+                    (walletBalances.get(key) || 0) - amount
+                );
+            } else if (transaction.transactionName === "OfflinePayment") {
+                if (transaction.ToID === key) {
+                    walletBalances.set(
+                        key,
+                        (walletBalances.get(key) || 0) + amount
+                    );
+                }
+                if (transaction.FromID === key) {
+                    walletBalances.set(
+                        key,
+                        (walletBalances.get(key) || 0) - amount
+                    );
+                }
+            }
         }
+    }
 
-        const balance = parseInt(balanceHex, 16); // Convert to decimal for fraud check
+    // Prepare the wallet public key output with calculated balances
+    for (let i = 0; i < keysList.length; i++) {
+        const key = keysList[i];
+        const balance: i32 = walletBalances.get(key) || 0;
+        const balanceHex = balance < 0
+            ? `-0x${Math.abs(balance).toString(16)}`
+            : `0x${balance.toString(16)}`;
         const fraudStatus = balance < 0;
 
         walletData.push(
@@ -235,12 +271,12 @@ export function listAllWalletPublicKeys(): void {
         );
     }
 
+    // Send the response
     Notifier.sendJson<StoredKeys>({
         success: true,
         walletPublicKeys: walletData,
     });
 }
-
 
 
 /**
