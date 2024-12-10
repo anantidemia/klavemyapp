@@ -37,9 +37,6 @@ export class TransactionListOutput {
     success: boolean = true;
     transactionList!: Transac[];
     walletPublicKeys: string[] = []; // Initialize with an empty array to avoid null/undefined issues
-    has_next!: boolean;
-    last_evaluated_key!: string;
-    date!: string;
 }
 
 

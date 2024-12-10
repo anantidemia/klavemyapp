@@ -119,10 +119,11 @@ export function storeTransaction(input: Transac): void {
 
 /**
  * @query
- * List all transactions stored in the secureElementTransactionTable with dynamic balance calculations.
+ * List all transactions stored in the secureElementTransactionTable with fraudStatus determined by balances in the balanceTable.
  */
 export function listAllTransactions(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+    const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
 
     // Retrieve the list of keys
     const keysList = seTransactionTable.get("keysList");
@@ -136,25 +137,20 @@ export function listAllTransactions(): void {
         if (transactionData && transactionData.trim() !== "") {
             const allTransactionsForKey = JSON.parse<Transac[]>(transactionData);
 
-            let estimateBalanceTo: i32 = 0; // Initialize balance for each key
-            let estimateBalanceFrom: i32 = 0;
-
             for (let j = 0; j < allTransactionsForKey.length; j++) {
                 const transac = allTransactionsForKey[j];
                 const transactionToAdd = new Transac();
 
-                // Recalculate balances dynamically
-                if (transac.transactionName === "Fund") {
-                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
-                } else if (transac.transactionName === "Defund") {
-                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
-                } else if (transac.transactionName === "OfflinePayment") {
-                    estimateBalanceTo += <i32>Math.floor(parseFloat(transac.amount));
-                    estimateBalanceFrom -= <i32>Math.floor(parseFloat(transac.amount));
-                }
+                // Retrieve balances from balanceTable
+                const toBalanceHex = balanceTable.get(transac.ToID) || "0x0";
+                const fromBalanceHex = balanceTable.get(transac.FromID) || "0x0";
 
-                // Determine fraud status dynamically
-                const fraudStatus = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
+                // Convert hex balances to decimal
+                const toBalance = parseInt(toBalanceHex, 16);
+                const fromBalance = parseInt(fromBalanceHex, 16);
+
+                // Determine fraud status based on balances
+                const fraudStatus = toBalance < 0 || fromBalance < 0;
 
                 // Add transaction details
                 transactionToAdd.walletPublicKey = transac.walletPublicKey;
@@ -167,8 +163,6 @@ export function listAllTransactions(): void {
                 transactionToAdd.generation = transac.generation;
                 transactionToAdd.currencycode = transac.currencycode;
                 transactionToAdd.txdate = transac.txdate;
-                transactionToAdd.estimateBalanceTo = estimateBalanceTo;
-                transactionToAdd.estimateBalanceFrom = estimateBalanceFrom;
                 transactionToAdd.fraudStatus = fraudStatus;
 
                 allTransactions.push(transactionToAdd);
@@ -179,10 +173,7 @@ export function listAllTransactions(): void {
     // Respond with all transactions
     const output: TransactionListOutput = {
         success: true,
-        transactionList: allTransactions,
-        has_next: false,
-        last_evaluated_key: "",
-        date: getDate().toString(),
+        transactionList: allTransactions
     };
 
     Notifier.sendJson<TransactionListOutput>(output);
@@ -434,10 +425,7 @@ export function listAllTransactionsObfuscated(): void {
     // Respond with obfuscated transactions
     const output: TransactionListOutput = {
         success: true,
-        transactionList: obfuscatedTransactions,
-        has_next: false,
-        last_evaluated_key: "",
-        date: getDate().toString(),
+        transactionList: obfuscatedTransactions
     };
 
     Notifier.sendJson<TransactionListOutput>(output);
@@ -610,10 +598,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
     const output: TransactionListOutput = {
         success: true,
         transactionList: transactions,
-        walletPublicKeys: walletPublicKeys,
-        has_next: false,
-        last_evaluated_key: "",
-        date: getDate().toString(),
+        walletPublicKeys: walletPublicKeys
     };
 
     Notifier.sendJson<TransactionListOutput>(output);
