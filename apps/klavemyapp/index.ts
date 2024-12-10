@@ -191,7 +191,7 @@ export function listAllWalletPublicKeys(): void {
     const keysList = balanceTable.get("keysList");
     const keysListHex  = keysList;
     // const keysListHex = balanceTable.get("keyList");
-    if (!keysListHex || keysListHex.trim() === "[]") {
+    if (!keysList) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
             message: "No keys found in the balance table.",
