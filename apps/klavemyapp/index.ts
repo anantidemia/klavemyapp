@@ -24,7 +24,7 @@ import { getDate , amountHexToNumber} from './utils';
 const myTableName = "my_storage_table";
 const secureElementTable = "se_table";
 const secureElementTransactionTable = "transaction_table";
-const secureElementBalanceTable = "balance_table";
+
 /**
  * @query
  * @param {FetchInput} input - A parsed input argument
@@ -156,7 +156,6 @@ export function listSecureElement(): void {
  */
 export function storeTransaction(input: Transac): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
-    const seBalanceTable = Ledger.getTable(secureElementBalanceTable);
     // Validate input
     if (
         !input.walletPublicKey ||
@@ -204,23 +203,13 @@ export function storeTransaction(input: Transac): void {
     const fraudStatus: boolean = estimateBalanceTo < 0 || estimateBalanceFrom < 0;
 
     // Include the balances and fraudStatus in the transaction
+    input.estimateBalanceTo = estimateBalanceTo;
+    input.estimateBalanceFrom = estimateBalanceFrom;
     input.fraudStatus = fraudStatus;
 
     // Add the transaction to FromID and ToID
-    if (input.transactionName === "Fund") {
-        input.estimateBalanceTo = estimateBalanceTo;
-        toTransactions.push(input);
-        
-    }else if (input.transactionName === "Defund") {
-        input.estimateBalanceFrom = estimateBalanceFrom;
-        fromTransactions.push(input);
-    }else if (input.transactionName === "OfflinePayment") {
-        input.estimateBalanceTo = estimateBalanceTo;
-        input.estimateBalanceFrom = estimateBalanceFrom;
-        toTransactions.push(input);
-        fromTransactions.push(input);
-    }
-    
+    fromTransactions.push(input);
+    toTransactions.push(input);
     seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
     seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
 
@@ -676,8 +665,6 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.generation = transac.generation;
                     transactionToAdd.currencycode = transac.currencycode;
                     transactionToAdd.txdate = transac.txdate;
-                    transactionToAdd.estimateBalanceTo = estimateBalanceTo;
-                    transactionToAdd.estimateBalanceFrom = estimateBalanceFrom;
                     transactionToAdd.fraudStatus = fraudStatus;
                 } else {
                     // Mask fields if keys don't match and fraudStatus is false
@@ -691,10 +678,10 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.generation = "*".repeat(transac.generation.length);
                     transactionToAdd.currencycode = "*".repeat(transac.currencycode.length);
                     transactionToAdd.txdate = "*".repeat(transac.txdate.length);
-                    transactionToAdd.estimateBalanceTo = 0;
-                    transactionToAdd.estimateBalanceFrom = 0;
                     transactionToAdd.fraudStatus = false;
                 }
+                transactionToAdd.estimateBalanceTo = estimateBalanceTo;
+                transactionToAdd.estimateBalanceFrom = estimateBalanceFrom;
 
                 transactions.push(transactionToAdd);
             }
