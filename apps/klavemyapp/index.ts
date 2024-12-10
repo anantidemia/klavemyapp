@@ -61,7 +61,6 @@ export function storeTransaction(input: Transac): void {
         const newBalanceHex = `0x${newBalance.toString(16)}`;
         balanceTable.set(input.ToID, newBalanceHex); // Store result in hex
 
-        console.log(`Stored Balance for ToID (${input.ToID}): ${newBalanceHex}`);
 
         // Add ToID to keysList if not present
         if (!keysList.includes(input.ToID)) {
@@ -73,8 +72,6 @@ export function storeTransaction(input: Transac): void {
         const newBalance = existingBalance - hexAmount; // Perform subtraction in decimal
         const newBalanceHex = `0x${newBalance.toString(16)}`;
         balanceTable.set(input.FromID, newBalanceHex); // Store result in hex
-
-        console.log(`Stored Balance for FromID (${input.FromID}): ${newBalanceHex}`);
 
         // Add FromID to keysList if not present
         if (!keysList.includes(input.FromID)) {
@@ -88,8 +85,6 @@ export function storeTransaction(input: Transac): void {
         const newToBalanceHex = `0x${newToBalance.toString(16)}`;
         balanceTable.set(input.ToID, newToBalanceHex); // Store result in hex
 
-        console.log(`Stored Balance for ToID (${input.ToID}): ${newToBalanceHex}`);
-
         // Update FromID balance
         const fromBalanceHex = balanceTable.get(input.FromID) || "0x0";
         const fromBalance = parseInt(fromBalanceHex, 16); // Convert hex to decimal
@@ -97,7 +92,6 @@ export function storeTransaction(input: Transac): void {
         const newFromBalanceHex = `0x${newFromBalance.toString(16)}`;
         balanceTable.set(input.FromID, newFromBalanceHex); // Store result in hex
 
-        console.log(`Stored Balance for FromID (${input.FromID}): ${newFromBalanceHex}`);
 
         // Add both ToID and FromID to keysList if not present
         if (!keysList.includes(input.ToID)) {
@@ -110,8 +104,6 @@ export function storeTransaction(input: Transac): void {
 
     // Save the updated keysList back to the balanceTable
     balanceTable.set("keysList", JSON.stringify(keysList));
-
-    console.log(`Updated keysList: ${JSON.stringify(keysList)}`);
 
     // Update secureElementTransactionTable
     if (input.transactionName === "Fund") {
@@ -237,8 +229,6 @@ export function listAllWalletPublicKeys(): void {
 
         const balance = parseInt(balanceHex, 16); // Convert to decimal for fraud check
         const fraudStatus = balance < 0;
-
-        console.log(`Fetched Balance for Key ${key}: ${balanceHex}`);
 
         walletData.push(
             `WalletPublicKey${i + 1}:${key}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
