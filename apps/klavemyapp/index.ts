@@ -182,7 +182,7 @@ export function listAllTransactions(): void {
 
 /**
  * @query
- * Fetch all wallet keys, masked balances, and unmasked fraud status from the balance table.
+ * Fetch all wallet keys, calculate fraud status based on balance, and provide masked keys and balances.
  */
 export function listAllWalletPublicKeys(): void {
     const balanceTable = Ledger.getTable(balanceTableName); // Access the balance table
@@ -209,12 +209,12 @@ export function listAllWalletPublicKeys(): void {
         const fraudStatus = balance < 0;
 
         // Mask the key and balance
-        const maskedKey = "*".repeat(key.length);
-        const maskedBalance = "*".repeat(balanceHex.length);
+        const maskedKey = key.slice(0, 4) + "*".repeat(key.length - 8) + key.slice(-4); // Mask key except first and last 4 characters
+        const maskedBalance = "*".repeat(balanceHex.length); // Fully mask the balance
 
         // Add wallet data to the output list
         walletData.push(
-            `WalletPublicKey${i + 1}: Key: ${maskedKey}, Balance: ${maskedBalance}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey${i + 1}:${maskedKey}, Balance: ${maskedBalance}, FraudStatus: ${fraudStatus}`
         );
     }
 
@@ -224,6 +224,7 @@ export function listAllWalletPublicKeys(): void {
         walletPublicKeys: walletData,
     });
 }
+
 
 
 
