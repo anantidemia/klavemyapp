@@ -500,20 +500,20 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         for (let j = 0; j < parsedTransactions.length; j++) {
             const transac = parsedTransactions[j];
             const transactionToAdd = new Transac();
-            const amount: i64 = i64(parseInt(transac.amount, 16));
+            const amount: u64 = u64(parseInt(transac.amount, 16));
 
             // Update balances dynamically
             if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
                 const toBalance = walletBalances.has(transac.ToID)
                     ? walletBalances.get(transac.ToID)!
-                    : i64(0);
+                    : u64(0);
                 walletBalances.set(transac.ToID, toBalance + amount);
             }
 
             if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
                 const fromBalance = walletBalances.has(transac.FromID)
                     ? walletBalances.get(transac.FromID)!
-                    : i64(0);
+                    : u64(0);
                 walletBalances.set(transac.FromID, fromBalance - amount);
             }
 
