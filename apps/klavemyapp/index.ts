@@ -11,7 +11,7 @@ import {
     RevealTransactionsInput,
     WalletStatus
 } from './types';
-import { addHex,subtractHex, isNegativeHex} from './utils';
+import { addHex,subtractHex, isNegativeHex, isValidJson, isValidHex} from './utils';
 
 
 const secureElementTransactionTable = "transaction_table";
@@ -133,7 +133,6 @@ export function storeTransaction(input: Transac): void {
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
-    // Check if the table exists
     if (!seTransactionTable) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
@@ -142,9 +141,13 @@ export function listAllWalletPublicKeys(): void {
         return;
     }
 
-    // Retrieve all wallet keys from the transaction table
-    const keysListHex = seTransactionTable.get("keysList") || "[]"; // Default to an empty list
-    const keysList = JSON.parse<string[]>(keysListHex);
+    const keysListHex = seTransactionTable.get("keysList") || "[]";
+    let keysList: string[] = [];
+
+    // Parse keys list without try-catch
+    if (isValidJson(keysListHex)) {
+        keysList = JSON.parse<string[]>(keysListHex);
+    }
 
     if (keysList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
@@ -154,27 +157,32 @@ export function listAllWalletPublicKeys(): void {
         return;
     }
 
-    const walletBalances: Map<string, string> = new Map(); // Store balances as hex strings
+    const walletBalances: Map<string, string> = new Map();
 
-    // Calculate balances dynamically from all transactions
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
         const transactionData = seTransactionTable.get(key) || "[]";
-        const transactions = JSON.parse<Transac[]>(transactionData);
+        let transactions: Transac[] = [];
+
+        // Parse transactions without try-catch
+        if (isValidJson(transactionData)) {
+            transactions = JSON.parse<Transac[]>(transactionData);
+        }
 
         for (let j = 0; j < transactions.length; j++) {
             const transaction = transactions[j];
-            const amountHex = transaction.amount; // Amount is already in hexadecimal format
+            if (!isValidHex(transaction.amount)) {
+                continue; // Skip invalid amounts
+            }
+            const amountHex = transaction.amount;
 
             if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
-                // Add to ToID's balance
                 const toBalanceHex = walletBalances.get(transaction.ToID) || "0x000000000000";
                 const newToBalance = addHex(toBalanceHex, amountHex);
                 walletBalances.set(transaction.ToID, newToBalance);
             }
 
             if (transaction.transactionName === "Defund" || transaction.transactionName === "OfflinePayment") {
-                // Subtract from FromID's balance
                 const fromBalanceHex = walletBalances.get(transaction.FromID) || "0x000000000000";
                 const newFromBalance = subtractHex(fromBalanceHex, amountHex);
                 walletBalances.set(transaction.FromID, newFromBalance);
@@ -183,21 +191,17 @@ export function listAllWalletPublicKeys(): void {
     }
 
     const walletData: string[] = [];
-
-    // Iterate through calculated balances to determine fraud status
-    const walletKeys = walletBalances.keys(); // Get all wallet keys
+    const walletKeys = walletBalances.keys();
     for (let i = 0; i < walletKeys.length; i++) {
         const walletKey = walletKeys[i];
-        const balanceHex = walletBalances.get(walletKey)!; // Non-null because the key exists
+        const balanceHex = walletBalances.get(walletKey)!;
         const fraudStatus = isNegativeHex(balanceHex);
 
-        // Format the wallet data
         walletData.push(
             `WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
         );
     }
 
-    // Send the response
     Notifier.sendJson<StoredKeys>({
         success: true,
         walletPublicKeys: walletData,

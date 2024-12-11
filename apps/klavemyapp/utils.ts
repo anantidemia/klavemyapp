@@ -29,6 +29,12 @@ export function getCurrentUser(): string {
 /**
  * Adds two hexadecimal values as strings and returns a 12-digit hexadecimal string.
  */
+/**
+ * Adds two hexadecimal values as strings and returns a 12-digit hexadecimal string.
+ */
+/**
+ * Adds two hexadecimal values as strings and returns a 12-digit hexadecimal string.
+ */
 export function addHex(hex1: string, hex2: string): string {
     const val1 = parseInt(hex1, 16);
     const val2 = parseInt(hex2, 16);
@@ -53,3 +59,30 @@ export function subtractHex(hex1: string, hex2: string): string {
 export function isNegativeHex(hex: string): boolean {
     return hex.startsWith("-");
 }
+
+/**
+ * Checks if a string is a valid JSON.
+ */
+export function isValidJson(json: string): boolean {
+    return json.startsWith("[") && json.endsWith("]");
+}
+
+/**
+ * Checks if a string is a valid hexadecimal value.
+ */
+export function isValidHex(hex: string): boolean {
+    for (let i = 0; i < hex.length; i++) {
+        const c = hex.charCodeAt(i);
+        if (
+            !(c === 0x30 || c === 0x78 || // '0' or 'x'
+              (c >= 0x30 && c <= 0x39) || // '0'-'9'
+              (c >= 0x41 && c <= 0x46) || // 'A'-'F'
+              (c >= 0x61 && c <= 0x66)) // 'a'-'f'
+        ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
