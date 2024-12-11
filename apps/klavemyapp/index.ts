@@ -124,12 +124,11 @@ export function storeTransaction(input: Transac): void {
         success: true,
     });
 }
-
-
 /**
  * @query
  * Fetch all wallet keys, dynamically calculate balances based on transactions in hexadecimal format, and provide fraud status.
  */
+
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
@@ -198,9 +197,9 @@ export function listAllWalletPublicKeys(): void {
             ? `-0x${(-balance).toString(16).padStart(12, "0")}` // Negative balance
             : `0x${balance.toString(16).padStart(12, "0")}`; // Positive balance
 
-        // Mask wallet data
+        // Format the wallet data
         walletData.push(
-            `WalletPublicKey${i + 1}:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey${i + 1}:${"*".repeat(walletKey.length)}, Balance: **************, FraudStatus: ${fraudStatus}`
         );
     }
 
@@ -210,8 +209,6 @@ export function listAllWalletPublicKeys(): void {
         walletPublicKeys: walletData,
     });
 }
-
-
 
 /**
  * @query
@@ -301,9 +298,6 @@ export function listAllTransactions(): void {
 }
 
 
-
-
-
 /**
  * @transaction
  * Deletes all transaction logs and data stored in the transaction_table and seTransactionTable.
@@ -343,10 +337,6 @@ export function deleteAllTransactionLogs(): void {
     });
 }
 
-
-/**
- * @transaction
- */
 /**
  * @transaction
  */
@@ -472,7 +462,7 @@ export function listAllTransactionsObfuscated(): void {
             ? `-0x${(-balance).toString(16).padStart(12, "0")}`
             : `0x${balance.toString(16).padStart(12, "0")}`;
 
-        walletData.push(`WalletPublicKey${i + 1}:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`);
+        walletData.push(`WalletPublicKey${i + 1}:${"*".repeat(walletKey.length)}, Balance: **************, FraudStatus: ${fraudStatus}`);
     }
 
     // Respond with obfuscated transactions and wallet data
@@ -484,7 +474,7 @@ export function listAllTransactionsObfuscated(): void {
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
- 
+
 /**
  * @transaction
  * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
