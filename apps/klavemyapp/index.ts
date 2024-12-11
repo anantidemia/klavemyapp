@@ -467,6 +467,14 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         }
     }
 
+    if (!keysMatch) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Keys are incorrect.",
+        });
+        return;
+    }
+
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
     // Retrieve all transactions
@@ -483,26 +491,45 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
             for (let j = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
-                transactions.push(transac);
-
+            
                 const amount: i64 = i64(parseInt(transac.amount, 16)); // Convert amount from hex to i64
-
+            
                 if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
-                    // Add to ToID's balance
                     const toBalance: i64 = walletBalances.has(transac.ToID)
                         ? walletBalances.get(transac.ToID)
                         : i64(0);
                     walletBalances.set(transac.ToID, toBalance + amount);
                 }
-
+            
                 if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
-                    // Subtract from FromID's balance
                     const fromBalance: i64 = walletBalances.has(transac.FromID)
                         ? walletBalances.get(transac.FromID)
                         : i64(0);
                     walletBalances.set(transac.FromID, fromBalance - amount);
                 }
+            
+                const fraudStatus = walletBalances.get(transac.FromID) < 0 || walletBalances.get(transac.ToID) < 0;
+            
+                if (fraudStatus) {
+                    transactions.push(transac); // Add original data if fraudStatus is true
+                } else {
+                    // Manually create a masked transaction object
+                    const maskedTransac: Transac = {
+                        walletPublicKey: "*".repeat(transac.walletPublicKey.length),
+                        synchronizationDate: "*".repeat(transac.synchronizationDate.length),
+                        transactionName: "*".repeat(transac.transactionName.length),
+                        FromID: "*".repeat(transac.FromID.length),
+                        ToID: "*".repeat(transac.ToID.length),
+                        nonce: "*".repeat(transac.nonce.length),
+                        amount: "*".repeat(transac.amount.length),
+                        generation: "*".repeat(transac.generation.length),
+                        currencycode: "*".repeat(transac.currencycode.length),
+                        txdate: "*".repeat(transac.txdate.length),
+                    };
+                    transactions.push(maskedTransac);
+                }
             }
+            
         }
     }
 
@@ -516,12 +543,12 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
         // Convert balance to a 12-digit hexadecimal string
         const balanceHex: string = balance < 0
-            ? `-0x${(-balance).toString(16).padStart(12, "0")}` // Negative balance
-            : `0x${balance.toString(16).padStart(12, "0")}`; // Positive balance
+            ? `-0x${(-balance).toString(16).padStart(12, "0")}`
+            : `0x${balance.toString(16).padStart(12, "0")}`;
 
         // Format the wallet data
         walletPublicKeys.push(
-            `WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey:${walletKey}, Balance: ${fraudStatus ? balanceHex : "*".repeat(balanceHex.length)}, FraudStatus: ${fraudStatus}`
         );
     }
 
