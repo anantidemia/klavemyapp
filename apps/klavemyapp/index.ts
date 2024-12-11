@@ -154,8 +154,7 @@ export function listAllWalletPublicKeys(): void {
         return;
     }
 
-    // Use a string-to-hex mapping for wallet balances
-    const walletBalances = new Map<string, string>(); // Store balances as hex strings
+    const walletBalances: Map<string, string> = new Map(); // Store balances as hex strings
 
     // Calculate balances dynamically from all transactions
     for (let i = 0; i < keysList.length; i++) {
@@ -165,18 +164,18 @@ export function listAllWalletPublicKeys(): void {
 
         for (let j = 0; j < transactions.length; j++) {
             const transaction = transactions[j];
-            const amountHex = transaction.amount; // Keep the amount as a hex string
+            const amountHex = transaction.amount; // Amount is already in hexadecimal format
 
             if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
                 // Add to ToID's balance
-                const toBalanceHex = walletBalances.get(transaction.ToID) || "0x0";
+                const toBalanceHex = walletBalances.get(transaction.ToID) || "0x000000000000";
                 const newToBalance = addHex(toBalanceHex, amountHex);
                 walletBalances.set(transaction.ToID, newToBalance);
             }
 
             if (transaction.transactionName === "Defund" || transaction.transactionName === "OfflinePayment") {
                 // Subtract from FromID's balance
-                const fromBalanceHex = walletBalances.get(transaction.FromID) || "0x0";
+                const fromBalanceHex = walletBalances.get(transaction.FromID) || "0x000000000000";
                 const newFromBalance = subtractHex(fromBalanceHex, amountHex);
                 walletBalances.set(transaction.FromID, newFromBalance);
             }
@@ -184,9 +183,9 @@ export function listAllWalletPublicKeys(): void {
     }
 
     const walletData: string[] = [];
-    const walletKeys = walletBalances.keys(); // Get all keys from the map
 
-    // Iterate through the wallet keys and calculate fraud status
+    // Iterate through calculated balances to determine fraud status
+    const walletKeys = walletBalances.keys(); // Get all wallet keys
     for (let i = 0; i < walletKeys.length; i++) {
         const walletKey = walletKeys[i];
         const balanceHex = walletBalances.get(walletKey)!; // Non-null because the key exists
@@ -204,6 +203,7 @@ export function listAllWalletPublicKeys(): void {
         walletPublicKeys: walletData,
     });
 }
+
 
 
 /**

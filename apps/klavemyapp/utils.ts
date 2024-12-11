@@ -27,10 +27,7 @@ export function getCurrentUser(): string {
 //     return f64(combinedValue) / 10000.0;
 // }
 /**
- * Adds two hexadecimal values.
- */
-/**
- * Adds two hexadecimal values as strings.
+ * Adds two hexadecimal values as strings and returns a 12-digit hexadecimal string.
  */
 export function addHex(hex1: string, hex2: string): string {
     const val1 = parseInt(hex1, 16);
@@ -39,7 +36,7 @@ export function addHex(hex1: string, hex2: string): string {
 }
 
 /**
- * Subtracts one hexadecimal value from another as strings.
+ * Subtracts one hexadecimal value from another and returns a 12-digit hexadecimal string.
  */
 export function subtractHex(hex1: string, hex2: string): string {
     const val1 = parseInt(hex1, 16);
