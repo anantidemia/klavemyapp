@@ -130,7 +130,6 @@ export function storeTransaction(input: Transac): void {
  * @query
  * Fetch all wallet keys, dynamically calculate balances based on transactions in hexadecimal format, and provide fraud status.
  */
-
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
 
@@ -196,7 +195,8 @@ export function listAllWalletPublicKeys(): void {
         const fraudStatus = balance < 0;
 
         // Convert balance to hexadecimal format
-        const balanceHex = `0x${Math.abs(balance).toString(16)}`; // Absolute value to ensure no negative hex
+        const balanceHex = (balance < 0 ? "-" : "0x") + 
+            Math.abs(balance).toString(16).padStart(12, "0"); // Convert to 12-digit hex with padding
 
         // Format the wallet data
         walletData.push(
@@ -210,8 +210,6 @@ export function listAllWalletPublicKeys(): void {
         walletPublicKeys: walletData,
     });
 }
-
-
 
 
 /**
