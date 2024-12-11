@@ -631,13 +631,3 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
-
-
-
-
-
-
-
-
-
-
