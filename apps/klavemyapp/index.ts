@@ -188,21 +188,22 @@ export function listAllWalletPublicKeys(): void {
     const walletData: string[] = [];
     const walletKeys = walletBalances.keys(); // Get all keys from the map
 
-    // Iterate through the wallet keys and calculate fraud status
     for (let i = 0; i < walletKeys.length; i++) {
         const walletKey = walletKeys[i];
         const balance = walletBalances.get(walletKey)!; // Non-null because the key exists
         const fraudStatus = balance < 0;
-
-        // Convert balance to hexadecimal format
-        const balanceHex = (balance < 0 ? "-" : "0x") + 
-            Math.abs(balance).toString(16).padStart(12, "0"); // Convert to 12-digit hex with padding
-
+    
+        // Convert balance to a 12-digit hexadecimal format
+        const balanceHex = balance < 0
+            ? `-0x${Math.abs(balance).toString(16).padStart(12, "0")}` // Negative balance
+            : `0x${balance.toString(16).padStart(12, "0")}`; // Positive balance
+    
         // Format the wallet data
         walletData.push(
             `WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
         );
     }
+    
 
     // Send the response
     Notifier.sendJson<StoredKeys>({
