@@ -21,8 +21,6 @@ export class Transac {
     generation!: string;
     currencycode!: string;
     txdate!: string;
-    estimateBalanceTo: number = 0; // Default value to ensure proper initialization
-    estimateBalanceFrom: number = 0; // Default value for initialization
     fraudStatus: boolean = false; // Indicates whether the transaction is fraudulent
 }
 
