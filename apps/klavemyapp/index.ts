@@ -440,7 +440,6 @@ export function listAllTransactionsObfuscated(): void {
     Notifier.sendJson<TransactionListOutput>(output);
 }
  
-
 /**
  * @transaction
  * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
@@ -465,6 +464,14 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             keysMatch = false;
             break;
         }
+    }
+
+    if (!keysMatch) {
+        Notifier.sendJson<ErrorMessage>({
+            success: false,
+            message: "Incorrect keys.",
+        });
+        return;
     }
 
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -500,53 +507,51 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         for (let j = 0; j < parsedTransactions.length; j++) {
             const transac = parsedTransactions[j];
             const transactionToAdd = new Transac();
-            const amount: u64 = u64(parseInt(transac.amount, 16));
+            const amount: i64 = i64(parseInt(transac.amount, 16));
 
             // Update balances dynamically
             if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
                 const toBalance = walletBalances.has(transac.ToID)
                     ? walletBalances.get(transac.ToID)!
-                    : u64(0);
+                    : i64(0);
                 walletBalances.set(transac.ToID, toBalance + amount);
             }
 
             if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
                 const fromBalance = walletBalances.has(transac.FromID)
                     ? walletBalances.get(transac.FromID)!
-                    : u64(0);
+                    : i64(0);
                 walletBalances.set(transac.FromID, fromBalance - amount);
             }
 
             const fraudStatus = (walletBalances.has(transac.ToID) && walletBalances.get(transac.ToID)! < 0) ||
                 (walletBalances.has(transac.FromID) && walletBalances.get(transac.FromID)! < 0);
 
-            // Apply logic similar to listAllWalletPublicKeys for walletPublicKey and balances
-            transactionToAdd.walletPublicKey = keysMatch
-                ? transac.walletPublicKey
-                : "*".repeat(transac.walletPublicKey.length);
-            transactionToAdd.synchronizationDate = keysMatch
-                ? transac.synchronizationDate
-                : "*".repeat(transac.synchronizationDate.length);
-            transactionToAdd.transactionName = keysMatch
-                ? transac.transactionName
-                : "*".repeat(transac.transactionName.length);
-            transactionToAdd.FromID = transac.FromID;
-            transactionToAdd.ToID = transac.ToID;
-            transactionToAdd.nonce = keysMatch
-                ? transac.nonce
-                : "*".repeat(transac.nonce.length);
-            transactionToAdd.amount = keysMatch
-                ? transac.amount
-                : "*".repeat(transac.amount.length);
-            transactionToAdd.generation = keysMatch
-                ? transac.generation
-                : "*".repeat(transac.generation.length);
-            transactionToAdd.currencycode = keysMatch
-                ? transac.currencycode
-                : "*".repeat(transac.currencycode.length);
-            transactionToAdd.txdate = keysMatch
-                ? transac.txdate
-                : "*".repeat(transac.txdate.length);
+            if (fraudStatus) {
+                // Show original data for fraud transactions
+                transactionToAdd.walletPublicKey = transac.walletPublicKey;
+                transactionToAdd.synchronizationDate = transac.synchronizationDate;
+                transactionToAdd.transactionName = transac.transactionName;
+                transactionToAdd.FromID = transac.FromID;
+                transactionToAdd.ToID = transac.ToID;
+                transactionToAdd.nonce = transac.nonce;
+                transactionToAdd.amount = transac.amount;
+                transactionToAdd.generation = transac.generation;
+                transactionToAdd.currencycode = transac.currencycode;
+                transactionToAdd.txdate = transac.txdate;
+            } else {
+                // Mask data for non-fraud transactions
+                transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
+                transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
+                transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
+                transactionToAdd.FromID = transac.FromID;
+                transactionToAdd.ToID = transac.ToID;
+                transactionToAdd.nonce = "*".repeat(transac.nonce.length);
+                transactionToAdd.amount = "*".repeat(transac.amount.length);
+                transactionToAdd.generation = "*".repeat(transac.generation.length);
+                transactionToAdd.currencycode = "*".repeat(transac.currencycode.length);
+                transactionToAdd.txdate = "*".repeat(transac.txdate.length);
+            }
 
             transactionToAdd.fraudStatus = fraudStatus;
             transactions.push(transactionToAdd);
@@ -565,11 +570,11 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             ? `-0x${(-balance).toString(16).padStart(12, "0")}`
             : `0x${balance.toString(16).padStart(12, "0")}`;
 
-        walletData.push(
-            keysMatch
-                ? `WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
-                : `WalletPublicKey:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`
-        );
+        if (fraudStatus) {
+            walletData.push(`WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`);
+        } else {
+            walletData.push(`WalletPublicKey:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`);
+        }
     }
 
     // Combine responses
