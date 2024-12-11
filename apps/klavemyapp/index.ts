@@ -198,9 +198,9 @@ export function listAllWalletPublicKeys(): void {
             ? `-0x${(-balance).toString(16).padStart(12, "0")}` // Negative balance
             : `0x${balance.toString(16).padStart(12, "0")}`; // Positive balance
 
-        // Format the wallet data
+        // Mask wallet data
         walletData.push(
-            `WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`
         );
     }
 
@@ -210,7 +210,6 @@ export function listAllWalletPublicKeys(): void {
         walletPublicKeys: walletData,
     });
 }
-
 
 
 
