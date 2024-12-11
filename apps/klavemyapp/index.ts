@@ -144,7 +144,7 @@ export function listAllWalletPublicKeys(): void {
 
     // Retrieve all wallet keys from the transaction table
     const keysListHex = seTransactionTable.get("keysList") || "[]"; // Default to an empty list
-    const keysList = JSON.parse<string[]>(keysListHex);
+    const keysList = JSON.parse<string[]>(keysListHex); // Added type argument
 
     if (keysList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
@@ -154,57 +154,55 @@ export function listAllWalletPublicKeys(): void {
         return;
     }
 
-    // Use a string-to-number mapping for wallet balances
-    const walletBalances = new Map<string, number>();
+    // Use a string-to-i64 mapping for wallet balances
+    const walletBalances = new Map<string, i64>();
 
     // Calculate balances dynamically from all transactions
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
         const transactionData = seTransactionTable.get(key) || "[]";
-        const transactions = JSON.parse<Transac[]>(transactionData);
+        const transactions = JSON.parse<Transac[]>(transactionData); // Added type argument
 
         for (let j = 0; j < transactions.length; j++) {
             const transaction = transactions[j];
-            const amount = parseInt(transaction.amount, 16); // Convert amount from hex to decimal
+            const amount: i64 = i64(parseInt(transaction.amount, 16)); // Convert amount from hex to i64
 
             if (transaction.transactionName === "Fund" || transaction.transactionName === "OfflinePayment") {
                 // Add to ToID's balance
-                const toBalance = walletBalances.has(transaction.ToID)
-                    ? walletBalances.get(transaction.ToID)!
-                    : 0;
+                const toBalance: i64 = walletBalances.has(transaction.ToID)
+                    ? walletBalances.get(transaction.ToID)
+                    : i64(0);
                 walletBalances.set(transaction.ToID, toBalance + amount);
             }
 
             if (transaction.transactionName === "Defund" || transaction.transactionName === "OfflinePayment") {
                 // Subtract from FromID's balance
-                const fromBalance = walletBalances.has(transaction.FromID)
-                    ? walletBalances.get(transaction.FromID)!
-                    : 0;
+                const fromBalance: i64 = walletBalances.has(transaction.FromID)
+                    ? walletBalances.get(transaction.FromID)
+                    : i64(0);
                 walletBalances.set(transaction.FromID, fromBalance - amount);
             }
         }
     }
 
     const walletData: string[] = [];
-    const walletKeys = walletBalances.keys(); // Get all keys from the map
+    const walletKeys: string[] = walletBalances.keys();
 
     for (let i = 0; i < walletKeys.length; i++) {
         const walletKey = walletKeys[i];
-        const balance = walletBalances.get(walletKey)!; // Non-null because the key exists
-        const fraudStatus = balance < 0;
-    
+        const balance: i64 = walletBalances.get(walletKey);
+        const fraudStatus: bool = balance < 0;
+
         // Convert balance to a 12-digit hexadecimal string
-        const balanceHex = balance < 0
-            ? `-0x${Math.abs(Math.floor(balance)).toString(16).padStart(12, "0")}` // Negative balance
-            : `0x${Math.floor(balance).toString(16).padStart(12, "0")}`; // Positive balance
-    
+        const balanceHex: string = balance < 0
+            ? `-0x${(-balance).toString(16).padStart(12, "0")}` // Negative balance
+            : `0x${balance.toString(16).padStart(12, "0")}`; // Positive balance
+
         // Format the wallet data
         walletData.push(
             `WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
         );
     }
-    
-    
 
     // Send the response
     Notifier.sendJson<StoredKeys>({
@@ -212,6 +210,7 @@ export function listAllWalletPublicKeys(): void {
         walletPublicKeys: walletData,
     });
 }
+
 
 
 /**
