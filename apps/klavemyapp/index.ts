@@ -544,8 +544,8 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
                 transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
                 transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
-                transactionToAdd.FromID = transac.FromID;
-                transactionToAdd.ToID = transac.ToID;
+                transactionToAdd.FromID = "*".repeat(transac.FromID.length);
+                transactionToAdd.ToID = "*".repeat(transac.ToID.length);
                 transactionToAdd.nonce = "*".repeat(transac.nonce.length);
                 transactionToAdd.amount = "*".repeat(transac.amount.length);
                 transactionToAdd.generation = "*".repeat(transac.generation.length);
