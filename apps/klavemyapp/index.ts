@@ -491,29 +491,29 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
             for (let j = 0; j < allTransactions.length; j++) {
                 const transac = allTransactions[j];
-            
+
                 const amount: i64 = i64(parseInt(transac.amount, 16)); // Convert amount from hex to i64
-            
+
                 if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
                     const toBalance: i64 = walletBalances.has(transac.ToID)
                         ? walletBalances.get(transac.ToID)
                         : i64(0);
                     walletBalances.set(transac.ToID, toBalance + amount);
                 }
-            
+
                 if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
                     const fromBalance: i64 = walletBalances.has(transac.FromID)
                         ? walletBalances.get(transac.FromID)
                         : i64(0);
                     walletBalances.set(transac.FromID, fromBalance - amount);
                 }
-            
+
                 const fraudStatus = walletBalances.get(transac.FromID) < 0 || walletBalances.get(transac.ToID) < 0;
-            
+
                 if (fraudStatus) {
                     transactions.push(transac); // Add original data if fraudStatus is true
                 } else {
-                    // Manually create a masked transaction object
+                    // Mask the transaction
                     const maskedTransac: Transac = {
                         walletPublicKey: "*".repeat(transac.walletPublicKey.length),
                         synchronizationDate: "*".repeat(transac.synchronizationDate.length),
@@ -525,11 +525,11 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                         generation: "*".repeat(transac.generation.length),
                         currencycode: "*".repeat(transac.currencycode.length),
                         txdate: "*".repeat(transac.txdate.length),
+                        fraudStatus: false
                     };
                     transactions.push(maskedTransac);
                 }
             }
-            
         }
     }
 
@@ -548,7 +548,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
         // Format the wallet data
         walletPublicKeys.push(
-            `WalletPublicKey:${walletKey}, Balance: ${fraudStatus ? balanceHex : "*".repeat(balanceHex.length)}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey:${fraudStatus ? walletKey : "*".repeat(walletKey.length)}, Balance: ${fraudStatus ? balanceHex : "*".repeat(balanceHex.length)}, FraudStatus: ${fraudStatus}`
         );
     }
 
