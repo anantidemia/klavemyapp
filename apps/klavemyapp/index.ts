@@ -200,7 +200,7 @@ export function listAllWalletPublicKeys(): void {
 
         // Format the wallet data
         walletData.push(
-            `WalletPublicKey:${maskedWalletKey}, Balance: ${maskedBalance}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey:${maskedWalletKey}, Balance: ${balance}, FraudStatus: ${fraudStatus}`
         );
     }
 
