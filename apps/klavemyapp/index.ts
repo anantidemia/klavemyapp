@@ -507,7 +507,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 // Calculate fraud status dynamically
                 const fraudStatus = walletBalances.get(transac.FromID) < 0 || walletBalances.get(transac.ToID) < 0;
 
-                if (keysMatch && fraudStatus) {
+                if (keysMatch) {
                     // Reveal all fields when keys match
                     transactionToAdd.walletPublicKey = transac.walletPublicKey;
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
@@ -555,7 +555,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
         // Format the wallet data
         walletData.push(
-            `WalletPublicKey:${maskedWalletKey}, Balance: ${maskedBalance}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey:${maskedWalletKey}, Balance: ${balance}, FraudStatus: ${fraudStatus}`
         );
     }
 
