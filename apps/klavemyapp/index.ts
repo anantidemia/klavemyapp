@@ -129,7 +129,6 @@ export function storeTransaction(input: Transac): void {
 /**
  * @query
  * Fetch all wallet keys, dynamically calculate balances based on transactions in hexadecimal format, and provide fraud status.
- * The data except fraudStatus will be masked.
  */
 export function listAllWalletPublicKeys(): void {
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
@@ -145,7 +144,7 @@ export function listAllWalletPublicKeys(): void {
 
     // Retrieve all wallet keys from the transaction table
     const keysListHex = seTransactionTable.get("keysList") || "[]"; // Default to an empty list
-    const keysList = JSON.parse<string[]>(keysListHex);
+    const keysList = JSON.parse<string[]>(keysListHex); // Added type argument
 
     if (keysList.length === 0) {
         Notifier.sendJson<ErrorMessage>({
@@ -162,7 +161,7 @@ export function listAllWalletPublicKeys(): void {
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
         const transactionData = seTransactionTable.get(key) || "[]";
-        const transactions = JSON.parse<Transac[]>(transactionData);
+        const transactions = JSON.parse<Transac[]>(transactionData); // Added type argument
 
         for (let j = 0; j < transactions.length; j++) {
             const transaction = transactions[j];
@@ -194,13 +193,14 @@ export function listAllWalletPublicKeys(): void {
         const balance: i64 = walletBalances.get(walletKey);
         const fraudStatus: bool = balance < 0;
 
-        // Mask sensitive data
-        const maskedWalletKey = "*".repeat(walletKey.length);
-        const maskedBalance = "*".repeat(14); // Masking the balance
+        // Convert balance to a 12-digit hexadecimal string
+        const balanceHex: string = balance < 0
+            ? `-0x${(-balance).toString(16).padStart(12, "0")}` // Negative balance
+            : `0x${balance.toString(16).padStart(12, "0")}`; // Positive balance
 
         // Format the wallet data
         walletData.push(
-            `WalletPublicKey:${maskedWalletKey}, Balance: ${balance}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
         );
     }
 
