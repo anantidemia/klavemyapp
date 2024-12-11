@@ -200,7 +200,7 @@ export function listAllWalletPublicKeys(): void {
 
         // Mask wallet data
         walletData.push(
-            `WalletPublicKey:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`
+            `WalletPublicKey${i + 1}:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`
         );
     }
 
@@ -287,7 +287,7 @@ export function listAllTransactions(): void {
             ? `-0x${(-balance).toString(16).padStart(12, "0")}`
             : `0x${balance.toString(16).padStart(12, "0")}`;
 
-        walletData.push(`WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`);
+        walletData.push(`WalletPublicKey${i + 1}:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`);
     }
 
     // Respond with all transactions and wallet data
@@ -472,7 +472,7 @@ export function listAllTransactionsObfuscated(): void {
             ? `-0x${(-balance).toString(16).padStart(12, "0")}`
             : `0x${balance.toString(16).padStart(12, "0")}`;
 
-        walletData.push(`WalletPublicKey:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`);
+        walletData.push(`WalletPublicKey${i + 1}:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`);
     }
 
     // Respond with obfuscated transactions and wallet data
@@ -616,9 +616,9 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             : `0x${balance.toString(16).padStart(12, "0")}`;
 
         if (fraudStatus) {
-            walletData.push(`WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`);
+            walletData.push(`WalletPublicKey${i + 1}:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`);
         } else {
-            walletData.push(`WalletPublicKey:${"*".repeat(walletKey.length)}, Balance: ${"*".repeat(14)}, FraudStatus: ${fraudStatus}`);
+            walletData.push(`WalletPublicKey${i + 1}:${"*".repeat(walletKey.length)}, Balance: **************, FraudStatus: ${fraudStatus}`);
         }
     }
 
