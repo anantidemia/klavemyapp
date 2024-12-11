@@ -507,8 +507,8 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 // Calculate fraud status dynamically
                 const fraudStatus = walletBalances.get(transac.FromID) < 0 || walletBalances.get(transac.ToID) < 0;
 
-                if (keysMatch) {
-                    // Reveal all fields when keys match
+                if (keysMatch && fraudStatus) {
+                    // Reveal all fields when keys match and fraudStatus is true
                     transactionToAdd.walletPublicKey = transac.walletPublicKey;
                     transactionToAdd.synchronizationDate = transac.synchronizationDate;
                     transactionToAdd.transactionName = transac.transactionName;
@@ -521,7 +521,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                     transactionToAdd.txdate = transac.txdate;
                     transactionToAdd.fraudStatus = fraudStatus;
                 } else {
-                    // Mask fields if keys don't match
+                    // Mask fields if fraudStatus is false or keys don't match
                     transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
                     transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
                     transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
@@ -540,24 +540,26 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         }
     }
 
-    // Prepare walletPublicKeys data
-    const walletData: string[] = [];
-    const walletKeys: string[] = walletBalances.keys();
+  // Prepare walletPublicKeys data
+const walletData: string[] = [];
+const walletKeys: string[] = walletBalances.keys();
 
-    for (let i = 0; i < walletKeys.length; i++) {
-        const walletKey = walletKeys[i];
-        const balance: i64 = walletBalances.get(walletKey);
-        const fraudStatus: bool = balance < 0;
+for (let i = 0; i < walletKeys.length; i++) {
+    const walletKey = walletKeys[i];
+    const balance: i64 = walletBalances.get(walletKey);
+    const fraudStatus: bool = balance < 0;
 
-        // Mask sensitive data if keys don't match
-        const maskedWalletKey = keysMatch ? walletKey : "*".repeat(walletKey.length);
-        const maskedBalance = keysMatch ? balance.toString() : "*".repeat(14);
+    // Convert balance to hexadecimal
+    const balanceHex = `0x${Math.abs(<f64>balance).toString(16)}`;
+    const maskedWalletKey = fraudStatus ? walletKey : "*".repeat(walletKey.length);
+    const maskedBalance = fraudStatus ? balanceHex : "*".repeat(14);
 
-        // Format the wallet data
-        walletData.push(
-            `WalletPublicKey:${maskedWalletKey}, Balance: ${balance}, FraudStatus: ${fraudStatus}`
-        );
-    }
+    // Format the wallet data
+    walletData.push(
+        `WalletPublicKey:${maskedWalletKey}, Balance: ${maskedBalance}, FraudStatus: ${fraudStatus}`
+    );
+}
+
 
     // Combine both responses
     const output: TransactionListOutput = {
