@@ -193,16 +193,17 @@ export function listAllWalletPublicKeys(): void {
         const balance = walletBalances.get(walletKey)!; // Non-null because the key exists
         const fraudStatus = balance < 0;
     
-        // Convert balance to a 12-digit hexadecimal format
+        // Convert balance to a 12-digit hexadecimal string
         const balanceHex = balance < 0
-            ? `-0x${Math.abs(balance).toString(16).padStart(12, "0")}` // Negative balance
-            : `0x${balance.toString(16).padStart(12, "0")}`; // Positive balance
+            ? `-0x${Math.abs(Math.floor(balance)).toString(16).padStart(12, "0")}` // Negative balance
+            : `0x${Math.floor(balance).toString(16).padStart(12, "0")}`; // Positive balance
     
         // Format the wallet data
         walletData.push(
             `WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
         );
     }
+    
     
 
     // Send the response
