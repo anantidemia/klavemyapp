@@ -139,7 +139,6 @@ export function storeTransaction(input: Transac): void {
             return dateB - dateA; // Descending order
         });
         // Save the sorted transactions back to the table
-        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     }
     
 
