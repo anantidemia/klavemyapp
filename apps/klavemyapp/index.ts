@@ -109,7 +109,7 @@ export function storeTransaction(input: Transac): void {
 
 /**
  * @query
- * Fetch all wallet keys, dynamically calculate balances based on transactions in hexadecimal format, and provide fraud status.
+ * Fetch all the wallet keys, dynamically calculate balances based on transactions in hexadecimal format, and provide fraud status.
  */
 
 export function listAllWalletPublicKeys(): void {
