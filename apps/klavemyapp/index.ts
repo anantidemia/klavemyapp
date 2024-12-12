@@ -115,7 +115,7 @@ export function storeTransaction(input: Transac): void {
         
     
         seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-    } else if (input.transactionName === "OfflinePayment") {
+    } else (input.transactionName === "OfflinePayment") {
         const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
         const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
     
@@ -127,7 +127,6 @@ export function storeTransaction(input: Transac): void {
             return dateB - dateA; // Descending order
         });
         seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-       
     
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
@@ -137,9 +136,10 @@ export function storeTransaction(input: Transac): void {
         toTransactions.sort((a, b) => {
             const dateA: i32 = i32(parseInt(a.synchronizationDate, 10));
             const dateB: i32 = i32(parseInt(b.synchronizationDate, 10));
-            return dateB - dateA;
+            return dateB - dateA; // Descending order
         });
-    
+        // Save the sorted transactions back to the table
+        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     }
     
 
