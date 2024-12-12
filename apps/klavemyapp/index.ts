@@ -274,6 +274,7 @@ export function listAllTransactions(): void {
 
       
 // Sort transactions by synchronizationDate in ascending order based on UTC timestamp
+/// Sort transactions by synchronizationDate in descending order based on UTC timestamp
 allTransactions.sort((a, b) => {
     const timestampA = Date.UTC(
         <i32>parseInt(a.synchronizationDate.substring(0, 4)), // Year
@@ -293,9 +294,8 @@ allTransactions.sort((a, b) => {
         <i32>parseInt(b.synchronizationDate.substring(17, 19)) // Seconds
     );
 
-    return <i32>(timestampA - timestampB);
+    return <i32>(timestampB - timestampA); // Reverse the order by swapping A and B
 });
-
 
 
     const walletData: string[] = [];
