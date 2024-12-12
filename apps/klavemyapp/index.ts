@@ -620,6 +620,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
     }
    
 /// Sort transactions by synchronizationDate in descending order based on UTC timestamp
+// Sort transactions by synchronizationDate in descending order
 transactions.sort((a, b) => {
     const timestampA = Date.UTC(
         <i32>parseInt(a.synchronizationDate.substring(0, 4)), // Year
@@ -641,6 +642,7 @@ transactions.sort((a, b) => {
 
     return <i32>(timestampB - timestampA); // Reverse the order by swapping A and B
 });
+
 
 
     const walletData: string[] = [];
