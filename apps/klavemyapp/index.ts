@@ -45,10 +45,8 @@ export function storeTransaction(input: Transac): void {
         return;
     }
 
-    // Parse the amount from hex to decimal
     const hexAmount = parseInt(input.amount, 16);
-    
-    // Update balances in balanceTable
+
     if (input.transactionName === "Fund") {
         const existingBalanceHex = balanceTable.get(input.ToID) || "0x0";
         const existingBalance = parseInt(existingBalanceHex, 16);
@@ -71,43 +69,28 @@ export function storeTransaction(input: Transac): void {
         balanceTable.set(input.FromID, `0x${newFromBalance.toString(16)}`);
     }
 
-    // Update keysList in balanceTable
-    const balanceKeysListHex = balanceTable.get("keysList") || "[]";
-    const balanceKeysList = JSON.parse<string[]>(balanceKeysListHex);
+    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+    fromTransactions.push(input);
 
-    // Avoid duplicates: Only add if not already present
-    if (!balanceKeysList.includes(input.FromID)) {
-        balanceKeysList.push(input.FromID);
-    }
-    if (input.FromID !== input.ToID && !balanceKeysList.includes(input.ToID)) {
-        balanceKeysList.push(input.ToID);
-    }
+    fromTransactions.sort((a, b) =>
+        i32(parseInt(b.synchronizationDate) - parseInt(a.synchronizationDate))
+    );
 
-    balanceTable.set("keysList", JSON.stringify(balanceKeysList));
+    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
 
-    // Update secureElementTransactionTable
-    if (input.transactionName === "Fund") {
+    if (input.transactionName === "OfflinePayment" || input.transactionName === "Fund") {
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
         toTransactions.push(input);
+
+        toTransactions.sort((a, b) =>
+            i32(parseInt(b.synchronizationDate) - parseInt(a.synchronizationDate))
+        );
+
         seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
-    } else if (input.transactionName === "Defund") {
-        const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
-        const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-        fromTransactions.push(input);
-        seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-    } else if (input.transactionName === "OfflinePayment") {
-        const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
-        const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-        fromTransactions.push(input);
-        seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-
-        const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
-        const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
-        toTransactions.push(input);
     }
 
-    // Maintain a list of keys in secureElementTransactionTable
     const seKeysList = seTransactionTable.get("keysList") || "[]";
     const seKeys = JSON.parse<Array<string>>(seKeysList);
 
@@ -119,11 +102,11 @@ export function storeTransaction(input: Transac): void {
     }
     seTransactionTable.set("keysList", JSON.stringify(seKeys));
 
-    // Respond with success
     Notifier.sendJson<StoreOutput>({
         success: true,
     });
 }
+
 /**
  * @query
  * Fetch all wallet keys, dynamically calculate balances based on transactions in hexadecimal format, and provide fraud status.
