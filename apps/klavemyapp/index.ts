@@ -126,7 +126,7 @@ export function storeTransaction(input: Transac): void {
             const dateB: i32 = i32(parseInt(b.synchronizationDate, 10));
             return dateB - dateA; // Descending order
         });
-    
+        seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
        
     
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
@@ -140,7 +140,6 @@ export function storeTransaction(input: Transac): void {
             return dateB - dateA;
         });
     
-        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     }
     
 
