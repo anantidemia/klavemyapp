@@ -86,42 +86,63 @@ export function storeTransaction(input: Transac): void {
     balanceTable.set("keysList", JSON.stringify(balanceKeysList));
 
     // Update secureElementTransactionTable
-if (input.transactionName === "Fund") {
-    const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
-    const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
-
-    // Add the new transaction and sort by synchronizationDate in descending order
-    toTransactions.push(input);
-    toTransactions.sort((a, b) => <i32>parseInt(b.synchronizationDate) - <i32>parseInt(a.synchronizationDate));
-
-    seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
-} else if (input.transactionName === "Defund") {
-    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
-    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-
-    // Add the new transaction and sort by synchronizationDate in descending order
-    fromTransactions.push(input);
-    fromTransactions.sort((a, b) => <i32>parseInt(b.synchronizationDate) - <i32>parseInt(a.synchronizationDate));
-
-    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-} else if (input.transactionName === "OfflinePayment") {
-    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
-    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-
-    // Add the new transaction and sort by synchronizationDate in descending order
-    fromTransactions.push(input);
-    fromTransactions.sort((a, b) => <i32>parseInt(b.synchronizationDate) - <i32>parseInt(a.synchronizationDate));
-
-    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-
-    const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
-    const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
-
-    // Add the new transaction and sort by synchronizationDate in descending order
-    toTransactions.push(input);
-    toTransactions.sort((a, b) => <i32>parseInt(b.synchronizationDate) - <i32>parseInt(a.synchronizationDate));
-
-}
+    if (input.transactionName === "Fund") {
+        const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
+        const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
+    
+        // Add the new transaction and sort by synchronizationDate in descending order
+        toTransactions.push(input);
+        toTransactions.sort((a, b) => {
+            const dateA: i32 = i32(parseInt(a.synchronizationDate, 10));
+            const dateB: i32 = i32(parseInt(b.synchronizationDate, 10));
+            return dateB - dateA;
+        });
+    
+        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
+    }
+    
+     else if (input.transactionName === "Defund") {
+        const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+        const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+    
+        // Add the new transaction and sort by synchronizationDate in descending order
+        fromTransactions.push(input);
+        fromTransactions.sort((a, b) => {
+            const dateA: i32 = i32(parseInt(a.synchronizationDate, 10));
+            const dateB: i32 = i32(parseInt(b.synchronizationDate, 10));
+            return dateB - dateA; // Descending order
+        });
+        
+    
+        seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
+    } else if (input.transactionName === "OfflinePayment") {
+        const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+        const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+    
+        // Add the new transaction and sort by synchronizationDate in descending order
+        fromTransactions.push(input);
+        fromTransactions.sort((a, b) => {
+            const dateA: i32 = i32(parseInt(a.synchronizationDate, 10));
+            const dateB: i32 = i32(parseInt(b.synchronizationDate, 10));
+            return dateB - dateA; // Descending order
+        });
+    
+       
+    
+        const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
+        const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
+    
+        // Add the new transaction and sort by synchronizationDate in descending order
+        toTransactions.push(input);
+        toTransactions.sort((a, b) => {
+            const dateA: i32 = i32(parseInt(a.synchronizationDate, 10));
+            const dateB: i32 = i32(parseInt(b.synchronizationDate, 10));
+            return dateB - dateA;
+        });
+    
+        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
+    }
+    
 
 
     // Maintain a list of keys in secureElementTransactionTable
