@@ -121,7 +121,6 @@ if (input.transactionName === "Fund") {
     toTransactions.push(input);
     toTransactions.sort((a, b) => <i32>parseInt(a.synchronizationDate) - <i32>parseInt(b.synchronizationDate));
 
-    seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
 }
 
 
