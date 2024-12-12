@@ -86,26 +86,43 @@ export function storeTransaction(input: Transac): void {
     balanceTable.set("keysList", JSON.stringify(balanceKeysList));
 
     // Update secureElementTransactionTable
-    if (input.transactionName === "Fund") {
-        const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
-        const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
-        toTransactions.push(input);
-        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
-    } else if (input.transactionName === "Defund") {
-        const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
-        const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-        fromTransactions.push(input);
-        seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-    } else if (input.transactionName === "OfflinePayment") {
-        const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
-        const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-        fromTransactions.push(input);
-        seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
+if (input.transactionName === "Fund") {
+    const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
+    const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
 
-        const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
-        const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
-        toTransactions.push(input);
-    }
+    // Add the new transaction and sort by synchronizationDate in descending order
+    toTransactions.push(input);
+    toTransactions.sort((a, b) => <i32>parseInt(b.synchronizationDate) - <i32>parseInt(a.synchronizationDate));
+
+    seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
+} else if (input.transactionName === "Defund") {
+    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+
+    // Add the new transaction and sort by synchronizationDate in descending order
+    fromTransactions.push(input);
+    fromTransactions.sort((a, b) => <i32>parseInt(b.synchronizationDate) - <i32>parseInt(a.synchronizationDate));
+
+    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
+} else if (input.transactionName === "OfflinePayment") {
+    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+
+    // Add the new transaction and sort by synchronizationDate in descending order
+    fromTransactions.push(input);
+    fromTransactions.sort((a, b) => <i32>parseInt(b.synchronizationDate) - <i32>parseInt(a.synchronizationDate));
+
+    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
+
+    const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
+    const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
+
+    // Add the new transaction and sort by synchronizationDate in descending order
+    toTransactions.push(input);
+    toTransactions.sort((a, b) => <i32>parseInt(b.synchronizationDate) - <i32>parseInt(a.synchronizationDate));
+
+}
+
 
     // Maintain a list of keys in secureElementTransactionTable
     const seKeysList = seTransactionTable.get("keysList") || "[]";
@@ -271,32 +288,6 @@ export function listAllTransactions(): void {
             }
         }
     }
-
-      
-// Sort transactions by synchronizationDate in ascending order based on UTC timestamp
-/// Sort transactions by synchronizationDate in descending order based on UTC timestamp
-allTransactions.sort((a, b) => {
-    const timestampA = Date.UTC(
-        <i32>parseInt(a.synchronizationDate.substring(0, 4)), // Year
-        <i32>parseInt(a.synchronizationDate.substring(5, 7)) - 1, // Month (0-based)
-        <i32>parseInt(a.synchronizationDate.substring(8, 10)), // Day
-        <i32>parseInt(a.synchronizationDate.substring(11, 13)), // Hours
-        <i32>parseInt(a.synchronizationDate.substring(14, 16)), // Minutes
-        <i32>parseInt(a.synchronizationDate.substring(17, 19)) // Seconds
-    );
-
-    const timestampB = Date.UTC(
-        <i32>parseInt(b.synchronizationDate.substring(0, 4)), // Year
-        <i32>parseInt(b.synchronizationDate.substring(5, 7)) - 1, // Month (0-based)
-        <i32>parseInt(b.synchronizationDate.substring(8, 10)), // Day
-        <i32>parseInt(b.synchronizationDate.substring(11, 13)), // Hours
-        <i32>parseInt(b.synchronizationDate.substring(14, 16)), // Minutes
-        <i32>parseInt(b.synchronizationDate.substring(17, 19)) // Seconds
-    );
-
-    return <i32>(timestampB - timestampA); // Reverse the order by swapping A and B
-});
-
 
     const walletData: string[] = [];
     const walletKeys = walletBalances.keys();
@@ -618,30 +609,6 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             transactions.push(transactionToAdd);
         }
     }
-   
-/// Sort transactions by synchronizationDate in descending order based on UTC timestamp
-transactions.sort((a, b) => {
-    const timestampA = Date.UTC(
-        <i32>parseInt(a.synchronizationDate.substring(0, 4)), // Year
-        <i32>parseInt(a.synchronizationDate.substring(5, 7)) - 1, // Month (0-based)
-        <i32>parseInt(a.synchronizationDate.substring(8, 10)), // Day
-        <i32>parseInt(a.synchronizationDate.substring(11, 13)), // Hours
-        <i32>parseInt(a.synchronizationDate.substring(14, 16)), // Minutes
-        <i32>parseInt(a.synchronizationDate.substring(17, 19)) // Seconds
-    );
-
-    const timestampB = Date.UTC(
-        <i32>parseInt(b.synchronizationDate.substring(0, 4)), // Year
-        <i32>parseInt(b.synchronizationDate.substring(5, 7)) - 1, // Month (0-based)
-        <i32>parseInt(b.synchronizationDate.substring(8, 10)), // Day
-        <i32>parseInt(b.synchronizationDate.substring(11, 13)), // Hours
-        <i32>parseInt(b.synchronizationDate.substring(14, 16)), // Minutes
-        <i32>parseInt(b.synchronizationDate.substring(17, 19)) // Seconds
-    );
-
-    return <i32>(timestampB - timestampA); // Reverse the order by swapping A and B
-});
-
 
     const walletData: string[] = [];
     const walletKeys = walletBalances.keys();
