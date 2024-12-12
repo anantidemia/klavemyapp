@@ -47,7 +47,7 @@ export function storeTransaction(input: Transac): void {
 
     // Parse the amount from hex to decimal
     const hexAmount = parseInt(input.amount, 16);
-
+    
     // Update balances in balanceTable
     if (input.transactionName === "Fund") {
         const existingBalanceHex = balanceTable.get(input.ToID) || "0x0";
@@ -71,77 +71,59 @@ export function storeTransaction(input: Transac): void {
         balanceTable.set(input.FromID, `0x${newFromBalance.toString(16)}`);
     }
 
+    // Update keysList in balanceTable
+    const balanceKeysListHex = balanceTable.get("keysList") || "[]";
+    const balanceKeysList = JSON.parse<string[]>(balanceKeysListHex);
+
+    // Avoid duplicates: Only add if not already present
+    if (!balanceKeysList.includes(input.FromID)) {
+        balanceKeysList.push(input.FromID);
+    }
+    if (input.FromID !== input.ToID && !balanceKeysList.includes(input.ToID)) {
+        balanceKeysList.push(input.ToID);
+    }
+
+    balanceTable.set("keysList", JSON.stringify(balanceKeysList));
+
     // Update secureElementTransactionTable
     if (input.transactionName === "Fund") {
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
-
-        // Add the new transaction
         toTransactions.push(input);
-
-        // Sort the transactions by synchronizationDate in descending order
-        toTransactions.sort((a, b) => {
-            const timestampA = parseInt(a.synchronizationDate); // Treat as numeric
-            const timestampB = parseInt(b.synchronizationDate); // Treat as numeric
-            return <i32>(timestampB - timestampA); // Descending order
-        });
-
-        // Store the updated list
         seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     } else if (input.transactionName === "Defund") {
         const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
         const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-
-        // Add the new transaction
         fromTransactions.push(input);
-
-        // Sort the transactions by synchronizationDate in descending order
-        fromTransactions.sort((a, b) => {
-            const timestampA = parseInt(a.synchronizationDate); // Treat as numeric
-            const timestampB = parseInt(b.synchronizationDate); // Treat as numeric
-            return <i32>(timestampB - timestampA); // Descending order
-        });
-
-        // Store the updated list
         seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
     } else if (input.transactionName === "OfflinePayment") {
         const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
         const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-
-        // Add the new transaction
         fromTransactions.push(input);
-
-        // Sort the transactions by synchronizationDate in descending order
-        fromTransactions.sort((a, b) => {
-            const timestampA = parseInt(a.synchronizationDate); // Treat as numeric
-            const timestampB = parseInt(b.synchronizationDate); // Treat as numeric
-            return <i32>(timestampB - timestampA); // Descending order
-        });
-
         seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
 
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
-
-        // Add the new transaction
         toTransactions.push(input);
-
-        // Sort the transactions by synchronizationDate in descending order
-        toTransactions.sort((a, b) => {
-            const timestampA = parseInt(a.synchronizationDate); // Treat as numeric
-            const timestampB = parseInt(b.synchronizationDate); // Treat as numeric
-            return <i32>(timestampB - timestampA); // Descending order
-        });
-
-        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     }
+
+    // Maintain a list of keys in secureElementTransactionTable
+    const seKeysList = seTransactionTable.get("keysList") || "[]";
+    const seKeys = JSON.parse<Array<string>>(seKeysList);
+
+    if (!seKeys.includes(input.FromID) && input.transactionName !== "Fund") {
+        seKeys.push(input.FromID);
+    }
+    if (!seKeys.includes(input.ToID) && input.transactionName !== "Defund") {
+        seKeys.push(input.ToID);
+    }
+    seTransactionTable.set("keysList", JSON.stringify(seKeys));
 
     // Respond with success
     Notifier.sendJson<StoreOutput>({
         success: true,
     });
 }
-
 /**
  * @query
  * Fetch all wallet keys, dynamically calculate balances based on transactions in hexadecimal format, and provide fraud status.
@@ -229,7 +211,7 @@ export function listAllWalletPublicKeys(): void {
 }
 
 /**
- * @transaction
+ * @query
  * List all transactions stored in the secureElementTransactionTable with fraudStatus determined by balances in the balanceTable.
  */
 export function listAllTransactions(): void {
@@ -290,7 +272,6 @@ export function listAllTransactions(): void {
         }
     }
 
-      
     const walletData: string[] = [];
     const walletKeys = walletBalances.keys();
 
@@ -357,7 +338,7 @@ export function deleteAllTransactionLogs(): void {
 }
 
 /**
- * @query
+ * @transaction
  */
 export function revealSecretKeys(): void {
     const keysTableName = "keys_storage_table";
@@ -611,6 +592,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             transactions.push(transactionToAdd);
         }
     }
+
     const walletData: string[] = [];
     const walletKeys = walletBalances.keys();
 
