@@ -291,31 +291,6 @@ export function listAllTransactions(): void {
     }
 
       
-// Sort transactions by synchronizationDate in ascending order based on UTC timestamp
-allTransactions.sort((a, b) => {
-    const timestampA = Date.UTC(
-        <i32>parseInt(a.synchronizationDate.substring(0, 4)), // Year
-        <i32>parseInt(a.synchronizationDate.substring(5, 7)) - 1, // Month (0-based)
-        <i32>parseInt(a.synchronizationDate.substring(8, 10)), // Day
-        <i32>parseInt(a.synchronizationDate.substring(11, 13)), // Hours
-        <i32>parseInt(a.synchronizationDate.substring(14, 16)), // Minutes
-        <i32>parseInt(a.synchronizationDate.substring(17, 19)) // Seconds
-    );
-
-    const timestampB = Date.UTC(
-        <i32>parseInt(b.synchronizationDate.substring(0, 4)), // Year
-        <i32>parseInt(b.synchronizationDate.substring(5, 7)) - 1, // Month (0-based)
-        <i32>parseInt(b.synchronizationDate.substring(8, 10)), // Day
-        <i32>parseInt(b.synchronizationDate.substring(11, 13)), // Hours
-        <i32>parseInt(b.synchronizationDate.substring(14, 16)), // Minutes
-        <i32>parseInt(b.synchronizationDate.substring(17, 19)) // Seconds
-    );
-
-    return <i32>(timestampA - timestampB);
-});
-
-
-
     const walletData: string[] = [];
     const walletKeys = walletBalances.keys();
 
