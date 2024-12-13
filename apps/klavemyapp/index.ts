@@ -71,18 +71,20 @@ export function storeTransaction(input: Transac): void {
     }
 
     // Add transaction logs
-    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
-    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-    fromTransactions.push(input);
-    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
+    const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
+    const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
+    toTransactions.push(input);
+    seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
 
-    if (input.transactionName === "Fund" || input.transactionName === "Defund" || input.transactionName === "OfflinePayment") {
-        const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
-        const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
-        toTransactions.push(input);
-        seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
+   
+
+    if (input.transactionName === "Fund" || input.transactionName === "Defund") {
+        const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+        const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+        fromTransactions.push(input);
+        seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
     }
-
+   
     // Sort logs after execution
     const sortedFromTransactions = JSON.parse<Array<Transac>>(seTransactionTable.get(input.FromID) || "[]");
     sortedFromTransactions.sort((a, b) =>
