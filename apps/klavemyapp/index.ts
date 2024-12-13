@@ -194,7 +194,7 @@ export function listAllWalletPublicKeys(): void {
 }
 
 /**
- * @query
+ * @transaction
  * List all transactions stored in the secureElementTransactionTable with fraudStatus determined by balances in the balanceTable.
  */
 export function listAllTransactions(): void {
@@ -371,7 +371,7 @@ export function revealSecretKeys(): void {
 }
 
 /**
- * @query
+ * @transaction
  * Obfuscate all transactions by masking sensitive fields with '*', while calculating dynamic balances.
  */
 
