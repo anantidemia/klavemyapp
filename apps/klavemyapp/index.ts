@@ -47,7 +47,7 @@ export function storeTransaction(input: Transac): void {
 
     const hexAmount = parseInt(input.amount, 16);
 
-    // Update balances based on transaction type
+    // Execution of transactions
     if (input.transactionName === "Fund") {
         const existingBalanceHex = balanceTable.get(input.ToID) || "0x0";
         const existingBalance = parseInt(existingBalanceHex, 16);
@@ -70,29 +70,27 @@ export function storeTransaction(input: Transac): void {
         balanceTable.set(input.FromID, `0x${newFromBalance.toString(16)}`);
     }
 
-    // Execute: Update transaction logs
-    const transactionsData = seTransactionTable.get(input.FromID) || "[]";
-    const transactions = JSON.parse<Array<Transac>>(transactionsData);
-    transactions.push(input);
+    // Add transaction logs
+    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
+    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
+    fromTransactions.push(input);
+    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
 
-    seTransactionTable.set(input.FromID, JSON.stringify(transactions));
-
-    if (input.transactionName !== "OfflinePayment") {
+    if (input.transactionName === "Fund" || input.transactionName === "Defund" || input.transactionName === "OfflinePayment") {
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
         toTransactions.push(input);
-
         seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     }
 
-    // Post-execution: Sort transaction logs
-    const sortedTransactions = JSON.parse<Array<Transac>>(seTransactionTable.get(input.FromID) || "[]");
-    sortedTransactions.sort((a, b) =>
+    // Sort logs after execution
+    const sortedFromTransactions = JSON.parse<Array<Transac>>(seTransactionTable.get(input.FromID) || "[]");
+    sortedFromTransactions.sort((a, b) =>
         i32(parseInt(b.synchronizationDate) - parseInt(a.synchronizationDate))
     );
-    seTransactionTable.set(input.FromID, JSON.stringify(sortedTransactions));
+    seTransactionTable.set(input.FromID, JSON.stringify(sortedFromTransactions));
 
-    if (input.transactionName !== "OfflinePayment") {
+    if (input.transactionName === "OfflinePayment" || input.transactionName === "Fund" || input.transactionName === "Defund") {
         const sortedToTransactions = JSON.parse<Array<Transac>>(seTransactionTable.get(input.ToID) || "[]");
         sortedToTransactions.sort((a, b) =>
             i32(parseInt(b.synchronizationDate) - parseInt(a.synchronizationDate))
