@@ -79,7 +79,7 @@ export function storeTransaction(input: Transac): void {
 
     seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
 
-    if (input.transactionName === "OfflinePayment" || input.transactionName === "Fund") {
+    if (input.transactionName === "OfflinePayment" || input.transactionName === "Fund" || input.transactionName === "Defund") {
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
         toTransactions.push(input);
