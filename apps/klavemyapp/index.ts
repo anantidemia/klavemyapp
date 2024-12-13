@@ -47,6 +47,7 @@ export function storeTransaction(input: Transac): void {
 
     const hexAmount = parseInt(input.amount, 16);
 
+    // Update balances based on transaction type
     if (input.transactionName === "Fund") {
         const existingBalanceHex = balanceTable.get(input.ToID) || "0x0";
         const existingBalance = parseInt(existingBalanceHex, 16);
@@ -69,28 +70,37 @@ export function storeTransaction(input: Transac): void {
         balanceTable.set(input.FromID, `0x${newFromBalance.toString(16)}`);
     }
 
-    const fromTransactionsData = seTransactionTable.get(input.FromID) || "[]";
-    const fromTransactions = JSON.parse<Array<Transac>>(fromTransactionsData);
-    fromTransactions.push(input);
+    // Execute: Update transaction logs
+    const transactionsData = seTransactionTable.get(input.FromID) || "[]";
+    const transactions = JSON.parse<Array<Transac>>(transactionsData);
+    transactions.push(input);
 
-    fromTransactions.sort((a, b) =>
-        i32(parseInt(b.synchronizationDate) - parseInt(a.synchronizationDate))
-    );
+    seTransactionTable.set(input.FromID, JSON.stringify(transactions));
 
-    seTransactionTable.set(input.FromID, JSON.stringify(fromTransactions));
-
-    if (input.transactionName === "OfflinePayment" || input.transactionName === "Fund" || input.transactionName === "Defund") {
+    if (input.transactionName !== "OfflinePayment") {
         const toTransactionsData = seTransactionTable.get(input.ToID) || "[]";
         const toTransactions = JSON.parse<Array<Transac>>(toTransactionsData);
         toTransactions.push(input);
 
-        toTransactions.sort((a, b) =>
-            i32(parseInt(b.synchronizationDate) - parseInt(a.synchronizationDate))
-        );
-
         seTransactionTable.set(input.ToID, JSON.stringify(toTransactions));
     }
 
+    // Post-execution: Sort transaction logs
+    const sortedTransactions = JSON.parse<Array<Transac>>(seTransactionTable.get(input.FromID) || "[]");
+    sortedTransactions.sort((a, b) =>
+        i32(parseInt(b.synchronizationDate) - parseInt(a.synchronizationDate))
+    );
+    seTransactionTable.set(input.FromID, JSON.stringify(sortedTransactions));
+
+    if (input.transactionName !== "OfflinePayment") {
+        const sortedToTransactions = JSON.parse<Array<Transac>>(seTransactionTable.get(input.ToID) || "[]");
+        sortedToTransactions.sort((a, b) =>
+            i32(parseInt(b.synchronizationDate) - parseInt(a.synchronizationDate))
+        );
+        seTransactionTable.set(input.ToID, JSON.stringify(sortedToTransactions));
+    }
+
+    // Update keys list
     const seKeysList = seTransactionTable.get("keysList") || "[]";
     const seKeys = JSON.parse<Array<string>>(seKeysList);
 
@@ -106,6 +116,7 @@ export function storeTransaction(input: Transac): void {
         success: true,
     });
 }
+
 
 /**
  * @query
