@@ -237,22 +237,27 @@ export function listAllTransactions(): void {
                 const amount: i64 = i64(parseInt(transac.amount, 16));
 
                 // Update balances dynamically
-                if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
+                var fraudStatus = false ; 
+				if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
                     const toBalance = walletBalances.has(transac.ToID)
                         ? walletBalances.get(transac.ToID)!
                         : i64(0);
                     walletBalances.set(transac.ToID, toBalance + amount);
+					if (walletBalances.has(transac.ToID) && walletBalances.get(transac.ToID)! < 0)
+					{
+					fraudStatus = true;
+					}
                 }
-
                 if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
                     const fromBalance = walletBalances.has(transac.FromID)
                         ? walletBalances.get(transac.FromID)!
                         : i64(0);
                     walletBalances.set(transac.FromID, fromBalance - amount);
+					if (walletBalances.has(transac.FromID) && walletBalances.get(transac.FromID)! < 0)
+					{
+					fraudStatus = true;
+					}
                 }
-
-                const fraudStatus = (walletBalances.has(transac.ToID) && walletBalances.get(transac.ToID)! < 0) ||
-                    (walletBalances.has(transac.FromID) && walletBalances.get(transac.FromID)! < 0);
 
                 // Add transaction details
                 transactionToAdd.walletPublicKey = transac.walletPublicKey;
@@ -544,23 +549,28 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             const transactionToAdd = new Transac();
             const amount: i64 = i64(parseInt(transac.amount, 16));
 
-            // Update balances dynamically
-            if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
-                const toBalance = walletBalances.has(transac.ToID)
-                    ? walletBalances.get(transac.ToID)!
-                    : i64(0);
-                walletBalances.set(transac.ToID, toBalance + amount);
-            }
-
-            if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
-                const fromBalance = walletBalances.has(transac.FromID)
-                    ? walletBalances.get(transac.FromID)!
-                    : i64(0);
-                walletBalances.set(transac.FromID, fromBalance - amount);
-            }
-
-            const fraudStatus = (walletBalances.has(transac.ToID) && walletBalances.get(transac.ToID)! < 0) ||
-                (walletBalances.has(transac.FromID) && walletBalances.get(transac.FromID)! < 0);
+             // Update balances dynamically
+             var fraudStatus = false ; 
+             if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
+                 const toBalance = walletBalances.has(transac.ToID)
+                     ? walletBalances.get(transac.ToID)!
+                     : i64(0);
+                 walletBalances.set(transac.ToID, toBalance + amount);
+                 if (walletBalances.has(transac.ToID) && walletBalances.get(transac.ToID)! < 0)
+                 {
+                 fraudStatus = true;
+                 }
+             }
+             if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
+                 const fromBalance = walletBalances.has(transac.FromID)
+                     ? walletBalances.get(transac.FromID)!
+                     : i64(0);
+                 walletBalances.set(transac.FromID, fromBalance - amount);
+                 if (walletBalances.has(transac.FromID) && walletBalances.get(transac.FromID)! < 0)
+                 {
+                 fraudStatus = true;
+                 }
+             }
 
             if (fraudStatus) {
                 // Show original data for fraud transactions
