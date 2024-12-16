@@ -236,28 +236,35 @@ export function listAllTransactions(): void {
                 const transactionToAdd = new Transac();
                 const amount: i64 = i64(parseInt(transac.amount, 16));
 
-                // Update balances dynamically
-                if (transac.transactionName === "Fund") {
-                    const toBalance = walletBalances.get(transac.ToID) || i64(0);
-                    walletBalances.set(transac.ToID, toBalance + amount);
-                }
-                
-                if (transac.transactionName === "Defund") {
-                    const fromBalance = walletBalances.get(transac.FromID) || i64(0);
-                    walletBalances.set(transac.FromID, fromBalance - amount);
-                }
-                
-                if (transac.transactionName === "OfflinePayment") {
-                    const fromBalance = walletBalances.get(transac.FromID) || i64(0);
-                    const toBalance = walletBalances.get(transac.ToID) || i64(0);
-                
-                    walletBalances.set(transac.FromID, fromBalance - amount);
-                    walletBalances.set(transac.ToID, toBalance + amount);
-                }
-                
+              // Update balances dynamically
+              if (transac.transactionName === "Fund") {
+                const toBalance = walletBalances.get(transac.ToID) || i64(0);
+                walletBalances.set(transac.ToID, toBalance + amount);
+            }
 
-                const fraudStatus = (transac.transactionName !== "Fund" && walletBalances.get(transac.FromID) < 0) ||
-                    (walletBalances.get(transac.ToID) < 0);
+            if (transac.transactionName === "Defund") {
+                const fromBalance = walletBalances.get(transac.FromID) || i64(0);
+                walletBalances.set(transac.FromID, fromBalance - amount);
+            }
+
+            if (transac.transactionName === "OfflinePayment") {
+                const fromBalance = walletBalances.get(transac.FromID) || i64(0);
+                const toBalance = walletBalances.get(transac.ToID) || i64(0);
+
+                walletBalances.set(transac.FromID, fromBalance - amount);
+                walletBalances.set(transac.ToID, toBalance + amount);
+            }
+
+            // Determine fraud status
+            const fromBalance = walletBalances.has(transac.FromID)
+                ? walletBalances.get(transac.FromID)!
+                : i64(0);
+            const toBalance = walletBalances.has(transac.ToID)
+                ? walletBalances.get(transac.ToID)!
+                : i64(0);
+
+            const fraudStatus = (transac.transactionName !== "Fund" && fromBalance < 0) || (toBalance < 0);
+
 
 
                 // Add transaction details
@@ -555,23 +562,29 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 const toBalance = walletBalances.get(transac.ToID) || i64(0);
                 walletBalances.set(transac.ToID, toBalance + amount);
             }
-            
+
             if (transac.transactionName === "Defund") {
                 const fromBalance = walletBalances.get(transac.FromID) || i64(0);
                 walletBalances.set(transac.FromID, fromBalance - amount);
             }
-            
+
             if (transac.transactionName === "OfflinePayment") {
                 const fromBalance = walletBalances.get(transac.FromID) || i64(0);
                 const toBalance = walletBalances.get(transac.ToID) || i64(0);
-            
+
                 walletBalances.set(transac.FromID, fromBalance - amount);
                 walletBalances.set(transac.ToID, toBalance + amount);
             }
-            
 
-            const fraudStatus = (transac.transactionName !== "Fund" && walletBalances.get(transac.FromID) < 0) ||
-                (walletBalances.get(transac.ToID) < 0);
+            // Determine fraud status
+            const fromBalance = walletBalances.has(transac.FromID)
+                ? walletBalances.get(transac.FromID)!
+                : i64(0);
+            const toBalance = walletBalances.has(transac.ToID)
+                ? walletBalances.get(transac.ToID)!
+                : i64(0);
+
+            const fraudStatus = (transac.transactionName !== "Fund" && fromBalance < 0) || (toBalance < 0);
 
             if (fraudStatus) {
                 // Show original data for fraud transactions
