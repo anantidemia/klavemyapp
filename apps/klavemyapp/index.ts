@@ -557,28 +557,27 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             const amount: i64 = i64(parseInt(transac.amount, 16));
             let fraudDetected = false;
 
-            // Update balances and detect fraud
-            if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
-                const toBalance = walletBalances.has(transac.ToID)
-                    ? walletBalances.get(transac.ToID)
-                    : i64(0);
-                walletBalances.set(transac.ToID, toBalance + amount);
-                if (walletBalances.get(transac.ToID) < 0) {
-                    fraudulentKeys.add(transac.ToID);
+             // Update balances dynamically
+             if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
+                 const toBalance = walletBalances.has(transac.ToID)
+                     ? walletBalances.get(transac.ToID)!
+                     : i64(0);
+                 walletBalances.set(transac.ToID, toBalance + amount);
+                 if (walletBalances.has(transac.ToID) && walletBalances.get(transac.ToID)! < 0)
+                 {
                     fraudDetected = true;
-                }
-            }
-
-            if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
-                const fromBalance = walletBalances.has(transac.FromID)
-                    ? walletBalances.get(transac.FromID)
-                    : i64(0);
-                walletBalances.set(transac.FromID, fromBalance - amount);
-                if (walletBalances.get(transac.FromID) < 0) {
-                    fraudulentKeys.add(transac.FromID);
+                 }
+             }
+             if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
+                 const fromBalance = walletBalances.has(transac.FromID)
+                     ? walletBalances.get(transac.FromID)!
+                     : i64(0);
+                 walletBalances.set(transac.FromID, fromBalance - amount);
+                 if (walletBalances.has(transac.FromID) && walletBalances.get(transac.FromID)! < 0)
+                 {
                     fraudDetected = true;
-                }
-            }
+                 }
+             }
 
             // Assign fraud status to the transaction
             transac.fraudStatus = fraudDetected;
