@@ -546,7 +546,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
     const walletBalances = new Map<string, i64>();
     const fraudulentKeys = new Set<string>(); // Store fraudulent wallet keys
 
-    // Calculate balances and identify fraudulent keys
+    // Step 1: Identify fraudulent keys
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
         const transactionData = seTransactionTable.get(key) || "[]";
@@ -577,7 +577,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         }
     }
 
-    // Gather and reveal relevant transactions
+    // Step 2: Gather all transactions and reveal based on fraud keys
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
         const transactionData = seTransactionTable.get(key) || "[]";
@@ -586,10 +586,11 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         for (let j = 0; j < parsedTransactions.length; j++) {
             const transac = parsedTransactions[j];
             const transactionToAdd = new Transac();
-            const isFraudulent = fraudulentKeys.has(transac.FromID) || fraudulentKeys.has(transac.ToID);
 
-            if (isFraudulent) {
-                // Copy properties manually instead of using Object.assign
+            const shouldReveal = fraudulentKeys.has(transac.FromID) || fraudulentKeys.has(transac.ToID);
+
+            if (shouldReveal) {
+                // Reveal full transaction details
                 transactionToAdd.walletPublicKey = transac.walletPublicKey;
                 transactionToAdd.synchronizationDate = transac.synchronizationDate;
                 transactionToAdd.transactionName = transac.transactionName;
@@ -601,7 +602,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 transactionToAdd.currencycode = transac.currencycode;
                 transactionToAdd.txdate = transac.txdate;
             } else {
-                // Mask data for non-fraudulent transactions
+                // Mask data for non-relevant transactions
                 transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
                 transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
                 transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
@@ -614,11 +615,13 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 transactionToAdd.txdate = "*".repeat(transac.txdate.length);
             }
 
-            transactionToAdd.fraudStatus = isFraudulent;
+            // Fraud status remains unchanged
+            transactionToAdd.fraudStatus = transac.fraudStatus;
             transactions.push(transactionToAdd);
         }
     }
 
+    // Step 3: Prepare wallet data and add fraudulent keys
     const walletData: string[] = [];
     const walletKeys = walletBalances.keys();
 
@@ -638,7 +641,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         );
     }
 
-    // Combine responses
+    // Step 4: Combine and send response
     const output: TransactionListOutput = {
         success: true,
         transactionList: transactions,
