@@ -587,9 +587,12 @@ export function revealTransactions(input: RevealTransactionsInput): void {
             const transac = parsedTransactions[j];
             const transactionToAdd = new Transac();
 
-            const shouldReveal = fraudulentKeys.has(transac.FromID) || fraudulentKeys.has(transac.ToID);
+            const isFraudulent = fraudulentKeys.has(transac.FromID) || fraudulentKeys.has(transac.ToID);
 
-            if (shouldReveal) {
+            // Dynamically calculate fraud status for this transaction
+            transactionToAdd.fraudStatus = isFraudulent || transac.fraudStatus;
+
+            if (isFraudulent) {
                 // Reveal full transaction details
                 transactionToAdd.walletPublicKey = transac.walletPublicKey;
                 transactionToAdd.synchronizationDate = transac.synchronizationDate;
@@ -615,8 +618,6 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 transactionToAdd.txdate = "*".repeat(transac.txdate.length);
             }
 
-            // Ensure fraud status remains unchanged
-            transactionToAdd.fraudStatus = transac.fraudStatus;
             transactions.push(transactionToAdd);
         }
     }
