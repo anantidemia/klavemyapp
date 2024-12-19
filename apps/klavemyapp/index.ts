@@ -586,13 +586,23 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
             let fraudStatus = false;
             if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
-                if (walletBalances.has(transac.ToID) && walletBalances.get(transac.ToID)! < 0) {
-                    fraudStatus = true;
+                const toBalance = walletBalances.has(transac.ToID)
+                    ? walletBalances.get(transac.ToID)!
+                    : i64(0);
+                walletBalances.set(transac.ToID, toBalance + amount);
+                if (walletBalances.has(transac.ToID) && walletBalances.get(transac.ToID)! < 0)
+                {
+                fraudStatus = true;
                 }
             }
             if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
-                if (walletBalances.has(transac.FromID) && walletBalances.get(transac.FromID)! < 0) {
-                    fraudStatus = true;
+                const fromBalance = walletBalances.has(transac.FromID)
+                    ? walletBalances.get(transac.FromID)!
+                    : i64(0);
+                walletBalances.set(transac.FromID, fromBalance - amount);
+                if (walletBalances.has(transac.FromID) && walletBalances.get(transac.FromID)! < 0)
+                {
+                fraudStatus = true;
                 }
             }
 
@@ -654,3 +664,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
     Notifier.sendJson<TransactionListOutput>(output);
 }
+
+
+
+
