@@ -485,8 +485,6 @@ export function listAllTransactionsObfuscated(): void {
     Notifier.sendJson<TransactionListOutput>(output);
 }
 
-
-
 /**
  * @transaction
  * Show all transactions, revealing original data if keys match, otherwise showing obfuscated data.
@@ -522,6 +520,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
     }
 
     const seTransactionTable = Ledger.getTable(secureElementTransactionTable);
+
     if (!seTransactionTable) {
         Notifier.sendJson<ErrorMessage>({
             success: false,
@@ -530,23 +529,13 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         return;
     }
 
-    // Retrieve all transactions
+    const walletBalances = new Map<string, i64>();
+    const fraudulentWallets = new Set<string>();
+
+    // Step 1: Calculate balances and identify fraudulent wallets
     const keysListHex = seTransactionTable.get("keysList") || "[]";
     const keysList: string[] = JSON.parse<string[]>(keysListHex);
 
-    if (keysList.length === 0) {
-        Notifier.sendJson<ErrorMessage>({
-            success: false,
-            message: "No transactions found.",
-        });
-        return;
-    }
-
-    const transactions: Transac[] = [];
-    const walletBalances = new Map<string, i64>();
-    const fraudulentKeys = new Set<string>(); // Store fraudulent wallet keys
-
-    // Step 1: Identify fraudulent keys
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
         const transactionData = seTransactionTable.get(key) || "[]";
@@ -558,26 +547,33 @@ export function revealTransactions(input: RevealTransactionsInput): void {
 
             if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
                 const toBalance = walletBalances.has(transac.ToID)
-                    ? walletBalances.get(transac.ToID)
+                    ? walletBalances.get(transac.ToID)!
                     : i64(0);
                 walletBalances.set(transac.ToID, toBalance + amount);
-                if (walletBalances.get(transac.ToID) < 0) {
-                    fraudulentKeys.add(transac.ToID);
-                }
             }
+
             if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
                 const fromBalance = walletBalances.has(transac.FromID)
-                    ? walletBalances.get(transac.FromID)
+                    ? walletBalances.get(transac.FromID)!
                     : i64(0);
                 walletBalances.set(transac.FromID, fromBalance - amount);
-                if (walletBalances.get(transac.FromID) < 0) {
-                    fraudulentKeys.add(transac.FromID);
-                }
             }
         }
     }
 
-    // Step 2: Gather all transactions and reveal based on fraud keys
+    for (let i = 0; i < walletBalances.keys().length; i++) {
+        const walletKey = walletBalances.keys()[i];
+        const balance = walletBalances.get(walletKey)!;
+
+        if (balance < 0) {
+            fraudulentWallets.add(walletKey); // Add wallet with fraud status
+        }
+    }
+
+    const transactions: Transac[] = [];
+    const walletData: string[] = [];
+
+    // Step 2: Collect and process transactions
     for (let i = 0; i < keysList.length; i++) {
         const key = keysList[i];
         const transactionData = seTransactionTable.get(key) || "[]";
@@ -586,11 +582,22 @@ export function revealTransactions(input: RevealTransactionsInput): void {
         for (let j = 0; j < parsedTransactions.length; j++) {
             const transac = parsedTransactions[j];
             const transactionToAdd = new Transac();
+            const amount: i64 = i64(parseInt(transac.amount, 16));
 
-            const shouldReveal = fraudulentKeys.has(transac.FromID) || fraudulentKeys.has(transac.ToID);
+            let fraudStatus = false;
+            if (transac.transactionName === "Fund" || transac.transactionName === "OfflinePayment") {
+                if (walletBalances.has(transac.ToID) && walletBalances.get(transac.ToID)! < 0) {
+                    fraudStatus = true;
+                }
+            }
+            if (transac.transactionName === "Defund" || transac.transactionName === "OfflinePayment") {
+                if (walletBalances.has(transac.FromID) && walletBalances.get(transac.FromID)! < 0) {
+                    fraudStatus = true;
+                }
+            }
 
-            if (shouldReveal) {
-                // Reveal full transaction details
+            // Reveal if the transaction is linked to a fraudulent wallet
+            if (fraudulentWallets.has(transac.FromID) || fraudulentWallets.has(transac.ToID)) {
                 transactionToAdd.walletPublicKey = transac.walletPublicKey;
                 transactionToAdd.synchronizationDate = transac.synchronizationDate;
                 transactionToAdd.transactionName = transac.transactionName;
@@ -602,7 +609,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 transactionToAdd.currencycode = transac.currencycode;
                 transactionToAdd.txdate = transac.txdate;
             } else {
-                // Mask data for non-relevant transactions
+                // Obfuscate non-revealed transactions
                 transactionToAdd.walletPublicKey = "*".repeat(transac.walletPublicKey.length);
                 transactionToAdd.synchronizationDate = "*".repeat(transac.synchronizationDate.length);
                 transactionToAdd.transactionName = "*".repeat(transac.transactionName.length);
@@ -615,33 +622,30 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 transactionToAdd.txdate = "*".repeat(transac.txdate.length);
             }
 
-            // Fraud status remains unchanged
-            transactionToAdd.fraudStatus = transac.fraudStatus;
+            transactionToAdd.fraudStatus = fraudStatus;
             transactions.push(transactionToAdd);
         }
     }
 
-    // Step 3: Prepare wallet data and add fraudulent keys
-    const walletData: string[] = [];
+    // Step 3: Prepare wallet data
     const walletKeys = walletBalances.keys();
-
     for (let i = 0; i < walletKeys.length; i++) {
         const walletKey = walletKeys[i];
-        const balance = walletBalances.get(walletKey);
+        const balance = walletBalances.get(walletKey)!;
         const fraudStatus = balance < 0;
 
         const balanceHex: string = balance < 0
             ? `-0x${(-balance).toString(16).padStart(12, "0")}`
             : `0x${balance.toString(16).padStart(12, "0")}`;
 
-        walletData.push(
-            fraudStatus
-                ? `WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`
-                : `WalletPublicKey:${"*".repeat(walletKey.length)}, Balance: **************, FraudStatus: ${fraudStatus}`
-        );
+        if (fraudStatus) {
+            walletData.push(`WalletPublicKey:${walletKey}, Balance: ${balanceHex}, FraudStatus: ${fraudStatus}`);
+        } else {
+            walletData.push(`WalletPublicKey:${"*".repeat(walletKey.length)}, Balance: **************, FraudStatus: ${fraudStatus}`);
+        }
     }
 
-    // Step 4: Combine and send response
+    // Combine responses
     const output: TransactionListOutput = {
         success: true,
         transactionList: transactions,
