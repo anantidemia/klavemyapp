@@ -615,7 +615,7 @@ export function revealTransactions(input: RevealTransactionsInput): void {
                 transactionToAdd.txdate = "*".repeat(transac.txdate.length);
             }
 
-            // Fraud status remains unchanged
+            // Ensure fraud status remains unchanged
             transactionToAdd.fraudStatus = transac.fraudStatus;
             transactions.push(transactionToAdd);
         }
