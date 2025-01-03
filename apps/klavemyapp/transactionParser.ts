@@ -1,6 +1,6 @@
 import { Transac } from './types'; // Import the Transac type
 
-// Define the DummyDataType correctly for AssemblyScript
+// Define the DummyDataType correctly for AssemblyScripts
 @serializable
 export class DummyTransaction {
     walletPublicKey!: string;
